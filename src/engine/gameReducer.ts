@@ -55,7 +55,6 @@ function canPlaceDie(
     case 'values': {
       if (!diceArea.values!.includes(die)) return false;
       if (diceArea.bracketed && added.length >= 1) return false;
-      if (added.length > 0 && added[0] !== die) return false; // only one type per turn
       return true;
     }
     case 'doubles': {
