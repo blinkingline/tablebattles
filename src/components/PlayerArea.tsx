@@ -10,25 +10,25 @@ interface Props {
   state: GameState;
   playerIndex: 0 | 1;
   dispatch: (action: GameAction) => void;
-  isBottom: boolean; // shown at bottom of screen (active perspective)
+  isBottom: boolean;
 }
 
 export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: Props) {
-  const [selectedDieIndex, setSelectedDieIndex] = useState<number | null>(null);
+  const [selectedDieIndices, setSelectedDieIndices] = useState<number[]>([]);
+  const [assignError, setAssignError] = useState<string | null>(null);
   const player = state.players[playerIndex];
   const isCurrentPlayer = state.currentPlayerIndex === playerIndex;
   const isRollPhase = state.phase === 'roll-phase';
   const isActionPhase = state.phase === 'action-phase';
   const isReactionPhase = state.phase === 'awaiting-reaction';
 
-  const isActive = isBottom; // bottom player is always the one we're showing controls for
+  const isActive = isBottom;
 
   const canAct = isActive && isCurrentPlayer;
   const opponentIndex = (1 - playerIndex) as 0 | 1;
   const pendingAction = state.pendingAction;
   const isPendingDefender = isReactionPhase && pendingAction?.actingPlayerIndex === opponentIndex;
 
-  // Whether any formation has dice/cubes and can act this action phase
   const hasAnyAction = isActionPhase && canAct && player.formations.some(f => {
     const c = getCard(f.cardId);
     if (f.isRouted || f.isRetired || f.hasPursued || f.inReserve) return false;
@@ -37,11 +37,17 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
 
   function handleDieClick(poolIndex: number) {
     if (!isActive || !isRollPhase || !isCurrentPlayer) return;
-    if (selectedDieIndex === poolIndex) {
-      setSelectedDieIndex(null);
-    } else {
-      setSelectedDieIndex(poolIndex);
-    }
+    setAssignError(null);
+    setSelectedDieIndices(prev =>
+      prev.includes(poolIndex)
+        ? prev.filter(i => i !== poolIndex)
+        : [...prev, poolIndex]
+    );
+  }
+
+  function handleDieSelected(indices: number[]) {
+    setSelectedDieIndices(indices);
+    if (indices.length === 0) setAssignError(null);
   }
 
   return (
@@ -57,9 +63,7 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
         <div className="flex items-center gap-2">
           <span
             className="font-bold text-sm"
-            style={{
-              color: isCurrentPlayer ? '#c9a84c' : '#9a8c7e',
-            }}
+            style={{ color: isCurrentPlayer ? '#c9a84c' : '#9a8c7e' }}
           >
             {player.factionName}
             {isCurrentPlayer && <span className="ml-2 text-xs">(Active)</span>}
@@ -75,7 +79,6 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
       {/* Phase controls (bottom/active player only) */}
       {isActive && (
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Action phase controls */}
           {isActionPhase && canAct && (
             <button
               onClick={() => dispatch({ type: 'PASS_ACTION' })}
@@ -90,7 +93,6 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
             </button>
           )}
 
-          {/* Reaction phase: no reaction button */}
           {isReactionPhase && isPendingDefender && (
             <>
               <div className="text-xs font-bold" style={{ color: '#e8a030' }}>
@@ -116,35 +118,41 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
             </>
           )}
 
-          {/* Roll phase: die selection from pool */}
+          {/* Dice pool — multi-select */}
           {isRollPhase && isCurrentPlayer && player.dicePool.length > 0 && (
-            <div className="flex flex-wrap gap-1 items-center">
-              <span className="text-xs" style={{ color: '#9a8c7e' }}>
-                Pool (click to select):
-              </span>
-              {player.dicePool.map((val, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleDieClick(i)}
-                  className="w-8 h-8 rounded text-sm font-bold flex items-center justify-center transition-all"
-                  style={{
-                    background: selectedDieIndex === i
-                      ? 'rgba(201,168,76,0.4)'
-                      : 'rgba(255,255,255,0.1)',
-                    border: selectedDieIndex === i
-                      ? '2px solid #c9a84c'
-                      : '1px solid rgba(255,255,255,0.2)',
-                    color: '#e8e0d0',
-                  }}
-                  title={`Select die ${val}`}
-                >
-                  {val}
-                </button>
-              ))}
-              {selectedDieIndex !== null && (
-                <span className="text-xs" style={{ color: '#c9a84c' }}>
-                  → click a formation to assign
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-wrap gap-1 items-center">
+                <span className="text-xs" style={{ color: '#9a8c7e' }}>
+                  Pool (click to select):
                 </span>
+                {player.dicePool.map((val, i) => {
+                  const isSelected = selectedDieIndices.includes(i);
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => handleDieClick(i)}
+                      className="w-8 h-8 rounded text-sm font-bold flex items-center justify-center transition-all"
+                      style={{
+                        background: isSelected ? 'rgba(201,168,76,0.4)' : 'rgba(255,255,255,0.1)',
+                        border: isSelected ? '2px solid #c9a84c' : '1px solid rgba(255,255,255,0.2)',
+                        color: '#e8e0d0',
+                      }}
+                      title={isSelected ? `Deselect ${val}` : `Select ${val}`}
+                    >
+                      {val}
+                    </button>
+                  );
+                })}
+                {selectedDieIndices.length > 0 && (
+                  <span className="text-xs" style={{ color: '#c9a84c' }}>
+                    → click a formation to assign ({selectedDieIndices.length} selected)
+                  </span>
+                )}
+              </div>
+              {assignError && (
+                <div className="text-xs px-2 py-1 rounded" style={{ color: '#e05c5c', background: 'rgba(224,92,92,0.1)', border: '1px solid rgba(224,92,92,0.3)' }}>
+                  {assignError}
+                </div>
               )}
             </div>
           )}
@@ -158,7 +166,7 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
         </div>
       )}
 
-      {/* Roll Phase controls (roll button + end phase) */}
+      {/* Roll Phase controls */}
       {isActive && (
         <DiceRoller
           state={state}
@@ -181,8 +189,9 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
               playerIndex={playerIndex}
               dispatch={dispatch}
               isActive={isActive}
-              selectedDieIndex={isActive ? selectedDieIndex : null}
-              onDieSelected={setSelectedDieIndex}
+              selectedDieIndices={isActive ? selectedDieIndices : []}
+              onDieSelected={handleDieSelected}
+              onAssignError={setAssignError}
             />
           );
         })}

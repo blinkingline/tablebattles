@@ -1,6 +1,6 @@
 import type { FormationCard, FormationState, GameState, FormationAction, DiceArea } from '../types';
 import type { GameAction } from '../engine/gameReducer';
-import { canAssignDie } from '../engine/gameReducer';
+import { canAssignDiceSet } from '../engine/gameReducer';
 
 interface Props {
   card: FormationCard;
@@ -9,8 +9,9 @@ interface Props {
   playerIndex: 0 | 1;
   dispatch: (action: GameAction) => void;
   isActive: boolean;
-  selectedDieIndex: number | null;
-  onDieSelected: (index: number | null) => void;
+  selectedDieIndices: number[];
+  onDieSelected: (indices: number[]) => void;
+  onAssignError: (msg: string) => void;
 }
 
 function diceFreq(dice: number[]): Record<number, number> {
@@ -60,6 +61,46 @@ function checkRequirement(action: FormationAction, formation: FormationState, ca
   }
 }
 
+function selectionErrorFor(
+  selectedDice: number[],
+  formation: FormationState,
+  card: FormationCard,
+): string {
+  const da = card.diceArea;
+  const existing = card.isSpecial ? formation.diceAddedThisRoll : formation.diceOnCard;
+  const total = existing.length + selectedDice.length;
+
+  switch (da.type) {
+    case 'doubles': {
+      if (total !== 2) {
+        const need = 2 - existing.length;
+        return `${card.name} needs ${need} more matching dice (Doubles = exactly 2 matching).`;
+      }
+      return `${card.name}: both dice must show the same value.`;
+    }
+    case 'triples': {
+      if (total !== 3) {
+        const need = 3 - existing.length;
+        return `${card.name} needs ${need} more matching dice (Triples = exactly 3 matching).`;
+      }
+      return `${card.name}: all three dice must show the same value.`;
+    }
+    case 'straight': {
+      const count = da.count!;
+      if (total !== count) {
+        const need = count - existing.length;
+        return `${card.name} needs ${need} more dice forming a Straight-${count} (consecutive values).`;
+      }
+      return `${card.name}: dice must form a consecutive sequence (e.g. 2-3-4-5).`;
+    }
+    case 'values':
+      if (da.bracketed && total > 1) return `${card.name} accepts only 1 die.`;
+      return `${card.name} only accepts dice showing: ${da.values!.join(' or ')}.`;
+    case 'any':
+      return `Cannot assign those dice to ${card.name} (wing slot already used this roll).`;
+  }
+}
+
 const WING_COLORS: Record<string, string> = {
   Red: '#c0392b',
   Pink: '#d4809e',
@@ -83,7 +124,7 @@ function diceAreaLabel(card: FormationCard): string {
     }
     case 'doubles': return 'Doubles (2 matching)';
     case 'triples': return 'Triples (3 matching)';
-    case 'straight': return `Straight ${da.count}`;
+    case 'straight': return `Straight-${da.count} (${da.count} consecutive)`;
     case 'any': return 'Any';
   }
 }
@@ -109,7 +150,8 @@ function actionTargetLine(action: FormationAction): string | null {
 }
 
 export default function FormationCardDisplay({
-  card, formation, state, playerIndex, dispatch, isActive, selectedDieIndex, onDieSelected,
+  card, formation, state, playerIndex, dispatch, isActive,
+  selectedDieIndices, onDieSelected, onAssignError,
 }: Props) {
   const isRouted = formation.isRouted;
   const isRetired = formation.isRetired;
@@ -122,15 +164,18 @@ export default function FormationCardDisplay({
   const isReactionPhase = state.phase === 'awaiting-reaction';
   const isCurrentPlayer = state.currentPlayerIndex === playerIndex;
 
-  const canReceiveDie = isActive && isRollPhase && isCurrentPlayer &&
-    selectedDieIndex !== null &&
-    canAssignDie(state, playerIndex, selectedDieIndex, card.id);
+  const canReceiveDice = isActive && isRollPhase && isCurrentPlayer &&
+    selectedDieIndices.length > 0 &&
+    canAssignDiceSet(state, playerIndex, selectedDieIndices, card.id);
+
+  // Show a "could assign but wrong selection" hint when formation is alive and in an open wing slot
+  const isAssignCandidate = isActive && isRollPhase && isCurrentPlayer &&
+    !isDead && !inReserve && selectedDieIndices.length > 0 && !canReceiveDice;
 
   const reactionOptions = state.availableReactions.filter(r => r.formationId === card.id);
   const isReactionTarget = isActive && isReactionPhase && !isCurrentPlayer && reactionOptions.length > 0;
 
   const hasDiceOrCubes = card.isSpecial ? formation.cubesOnCard > 0 : formation.diceOnCard.length > 0;
-  // Whether this card's active player can act from it right now
   const isMyTurn = isActive && isActionPhase && isCurrentPlayer && !isDead && !inReserve;
   const canTakeAction = isMyTurn && hasDiceOrCubes
     && card.actions.some(a =>
@@ -142,15 +187,15 @@ export default function FormationCardDisplay({
   const wingBg = WING_BG[card.wing] ?? 'rgba(128,128,128,0.1)';
 
   const cardOpacity = isDead ? 0.35 : inReserve ? 0.55 : 1;
-  const cardBorder = canReceiveDie
+  const cardBorder = canReceiveDice
     ? '2px solid #c9a84c'
     : isReactionTarget
     ? '2px solid #4a9c5e'
     : canTakeAction
     ? '2px solid rgba(201,168,76,0.8)'
     : '1px solid rgba(255,255,255,0.1)';
-  const cardGlow = (canTakeAction || canReceiveDie || isReactionTarget)
-    ? canReceiveDie
+  const cardGlow = (canTakeAction || canReceiveDice || isReactionTarget)
+    ? canReceiveDice
       ? '0 0 12px rgba(201,168,76,0.5)'
       : isReactionTarget
       ? '0 0 12px rgba(74,156,94,0.4)'
@@ -158,16 +203,12 @@ export default function FormationCardDisplay({
     : undefined;
 
   function handleCardClick() {
-    if (canReceiveDie && selectedDieIndex !== null) {
-      const pool = state.players[playerIndex].dicePool;
-      const dieValue = pool[selectedDieIndex];
-      dispatch({ type: 'ASSIGN_DIE', diePoolIndex: selectedDieIndex, formationId: card.id });
-      const nextIdx = pool.findIndex((v, i) => v === dieValue && i !== selectedDieIndex);
-      if (nextIdx !== -1) {
-        onDieSelected(nextIdx > selectedDieIndex ? nextIdx - 1 : nextIdx);
-      } else {
-        onDieSelected(null);
-      }
+    if (canReceiveDice) {
+      dispatch({ type: 'ASSIGN_DICE', diePoolIndices: selectedDieIndices, formationId: card.id });
+      onDieSelected([]);
+    } else if (isAssignCandidate) {
+      const selectedDice = selectedDieIndices.map(i => state.players[playerIndex].dicePool[i]);
+      onAssignError(selectionErrorFor(selectedDice, formation, card));
     }
   }
 
@@ -187,10 +228,10 @@ export default function FormationCardDisplay({
         opacity: cardOpacity,
         width: '190px',
         position: 'relative',
-        cursor: canReceiveDie ? 'pointer' : 'default',
+        cursor: (canReceiveDice || isAssignCandidate) ? 'pointer' : 'default',
       }}
-      onClick={canReceiveDie ? handleCardClick : undefined}
-      title={canReceiveDie ? `Assign die to ${card.name}` : undefined}
+      onClick={handleCardClick}
+      title={canReceiveDice ? `Assign ${selectedDieIndices.length} dice to ${card.name}` : undefined}
     >
       {/* Wing colour bar */}
       <div
@@ -315,7 +356,6 @@ export default function FormationCardDisplay({
             const canClickReaction = isReactionTarget && !!reactionOpt;
             const isClickable = canClickAction || canClickReaction;
 
-            // Colour scheme per state
             let bg: string, border: string, typeColor: string, detailColor: string, descColor: string;
             if (canClickAction) {
               bg = 'rgba(201,168,76,0.14)';
@@ -330,21 +370,18 @@ export default function FormationCardDisplay({
               detailColor = '#3a9458';
               descColor = '#3a8850';
             } else if (!isActiveType) {
-              // Reaction-type action, not currently triggerable
               bg = 'rgba(40,65,90,0.25)';
               border = '1px solid rgba(60,90,120,0.3)';
               typeColor = '#5a80a0';
               detailColor = '#4a6070';
               descColor = '#4a6070';
             } else if (isMyTurn && isActiveType && hasDiceOrCubes && !reqMet) {
-              // Active type, has dice, but req not met — show why
               bg = 'rgba(120,60,40,0.15)';
               border = '1px solid rgba(150,80,60,0.3)';
               typeColor = '#8b5540';
               detailColor = '#704535';
               descColor = '#704535';
             } else {
-              // Inactive / other player / no dice
               bg = 'rgba(40,40,40,0.3)';
               border = '1px solid rgba(80,80,80,0.2)';
               typeColor = '#604840';
@@ -367,7 +404,6 @@ export default function FormationCardDisplay({
                     e.stopPropagation();
                     dispatch({ type: 'TAKE_REACTION', formationId: card.id, actionIndex: i });
                   }
-                  // Otherwise let the click bubble up to the card for die assignment
                 }}
                 className="text-left rounded transition-all"
                 style={{
@@ -389,7 +425,6 @@ export default function FormationCardDisplay({
                     : action.description
                 }
               >
-                {/* Type + requirement */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', flexWrap: 'wrap' }}>
                   <span style={{ color: typeColor, fontSize: '0.68rem', fontWeight: 700 }}>
                     {action.actionType}
@@ -404,18 +439,15 @@ export default function FormationCardDisplay({
                       {optLabel}
                     </span>
                   )}
-                  {/* Unmet requirement indicator */}
                   {isMyTurn && isActiveType && hasDiceOrCubes && !reqMet && action.requirement && (
                     <span style={{ color: '#c05030', fontSize: '0.6rem' }}>✗ need {action.requirement}</span>
                   )}
                 </div>
-                {/* Target line */}
                 {targetLine && (
                   <div style={{ color: '#7aaccc', fontSize: '0.6rem', marginTop: '1px' }}>
                     {targetLine}
                   </div>
                 )}
-                {/* Description */}
                 <div style={{ color: descColor, fontSize: '0.6rem', marginTop: '1px' }}>
                   {action.description}
                 </div>

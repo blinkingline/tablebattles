@@ -8,7 +8,7 @@ import { SCENARIOS } from '../data/scenarios';
 export type GameAction =
   | { type: 'SELECT_SCENARIO'; scenarioId: string }
   | { type: 'ROLL_DICE' }
-  | { type: 'ASSIGN_DIE'; diePoolIndex: number; formationId: string }
+  | { type: 'ASSIGN_DICE'; diePoolIndices: number[]; formationId: string }
   | { type: 'RETURN_DIE'; formationId: string; dieIndex: number }
   | { type: 'END_ROLL_PHASE' }
   | { type: 'TAKE_ACTION'; formationId: string; actionIndex: number }
@@ -42,49 +42,44 @@ function isPlayable(f: FormationState) {
   return isActive(f) && !f.inReserve;
 }
 
-/** Verify a die value can be placed on a formation this roll phase. */
-function canPlaceDie(
-  die: number,
-  formation: FormationState,
+/**
+ * Validate that a set of new dice can be assigned to a formation given existing dice already there.
+ * Doubles/Triples/Straight require the full pattern to be complete after adding the new dice.
+ * Values/Any accept any count of valid dice.
+ */
+function validateDiceSetForArea(
+  newDice: number[],
+  existingDice: number[],
   diceArea: DiceArea,
 ): boolean {
-  if (!isPlayable(formation)) return false;
-
-  // Use the most complete picture of what's already on the formation:
-  // Normal formations: diceOnCard has all dice (this roll + any carry-over from a passed turn).
-  // Special formations: diceOnCard is always empty; diceAddedThisRoll tracks this roll's placements.
-  const existing = formation.diceOnCard.length > 0
-    ? formation.diceOnCard
-    : formation.diceAddedThisRoll;
+  if (newDice.length === 0) return false;
+  const allDice = [...existingDice, ...newDice];
 
   switch (diceArea.type) {
     case 'values': {
-      if (!diceArea.values!.includes(die)) return false;
-      if (diceArea.bracketed && existing.length >= 1) return false;
+      if (!newDice.every(d => diceArea.values!.includes(d))) return false;
+      if (diceArea.bracketed) return existingDice.length === 0 && newDice.length === 1;
       return true;
-    }
-    case 'doubles': {
-      if (existing.length >= 2) return false;
-      if (existing.length === 1 && existing[0] !== die) return false;
-      return true;
-    }
-    case 'triples': {
-      if (existing.length >= 3) return false;
-      if (existing.length > 0 && existing[0] !== die) return false;
-      return true;
-    }
-    case 'straight': {
-      const count = diceArea.count!;
-      if (existing.length >= count) return false;
-      if (existing.length === 0) return true;
-      const sorted = [...existing].sort((a, b) => a - b);
-      const lo = sorted[0], hi = sorted[sorted.length - 1];
-      if (die !== lo - 1 && die !== hi + 1) return false;
-      const newLo = Math.min(die, lo), newHi = Math.max(die, hi);
-      return newHi - newLo + 1 <= count;
     }
     case 'any':
       return true;
+    case 'doubles': {
+      if (allDice.length !== 2) return false;
+      return allDice[0] === allDice[1];
+    }
+    case 'triples': {
+      if (allDice.length !== 3) return false;
+      return allDice.every(d => d === allDice[0]);
+    }
+    case 'straight': {
+      const count = diceArea.count!;
+      if (allDice.length !== count) return false;
+      const sorted = [...allDice].sort((a, b) => a - b);
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] !== sorted[i - 1] + 1) return false;
+      }
+      return true;
+    }
   }
 }
 
@@ -605,61 +600,33 @@ function handleRollDice(state: GameState): GameState {
   };
 }
 
-function handleAssignDie(state: GameState, diePoolIndex: number, formationId: string): GameState {
+function handleAssignDice(state: GameState, diePoolIndices: number[], formationId: string): GameState {
+  if (!canAssignDiceSet(state, state.currentPlayerIndex, diePoolIndices, formationId)) return state;
+
   const pi = state.currentPlayerIndex;
   const player = state.players[pi];
-  const die = player.dicePool[diePoolIndex];
-  if (die === undefined) return state;
-
   const fIdx = player.formations.findIndex(f => f.cardId === formationId);
-  if (fIdx === -1) return state;
-  const formation = player.formations[fIdx];
   const card = getCard(formationId);
+  const dies = diePoolIndices.map(i => player.dicePool[i]);
 
-  if (!canPlaceDie(die, formation, card.diceArea)) return state;
+  const newPool = player.dicePool.filter((_, i) => !diePoolIndices.includes(i));
 
-  // Check wing slot availability
-  const wing = card.wing;
-  const alreadyInWing = wingAssignmentCount(player, wing);
-  const maxInWing = maxWingAssignments(pi, state, wing);
-  // Allow if this formation already has dice added this roll (same formation, not new slot)
-  if (formation.diceAddedThisRoll.length === 0 && alreadyInWing >= maxInWing) return state;
-
-  // For Special Formations: return die to pool, add cube instead
   if (card.isSpecial) {
-    if (formation.cubesOnCard >= (card.specialMax ?? 1)) return state;
-    const newPool = player.dicePool.filter((_, i) => i !== diePoolIndex);
     const newFormations = player.formations.map((f, i) =>
       i === fIdx
-        ? { ...f, cubesOnCard: f.cubesOnCard + 1, diceAddedThisRoll: [...f.diceAddedThisRoll, die] }
+        ? { ...f, cubesOnCard: f.cubesOnCard + dies.length, diceAddedThisRoll: [...f.diceAddedThisRoll, ...dies] }
         : f
     );
-    // Special: The Fog can't exceed 3 cubes (its max)
     const newPlayers = [...state.players] as [PlayerState, PlayerState];
     newPlayers[pi] = { ...player, dicePool: newPool, formations: newFormations };
     return { ...state, players: newPlayers };
   }
 
-  // Check Clinton special rule
-  if (card.specialRuleId === 'clinton') {
-    const grant = player.formations.find(f => getCard(f.cardId).name === 'Grant');
-    const hessians = player.formations.find(f => getCard(f.cardId).name === 'Hessians');
-    const grantRouted = !grant || !isActive(grant);
-    const hessiansRouted = !hessians || !isActive(hessians);
-    if (grantRouted || hessiansRouted) return state; // can't place dice if either is routed
-  }
-
-  const newPool = player.dicePool.filter((_, i) => i !== diePoolIndex);
   const newFormations = player.formations.map((f, i) =>
     i === fIdx
-      ? {
-          ...f,
-          diceOnCard: [...f.diceOnCard, die],
-          diceAddedThisRoll: [...f.diceAddedThisRoll, die],
-        }
+      ? { ...f, diceOnCard: [...f.diceOnCard, ...dies], diceAddedThisRoll: [...f.diceAddedThisRoll, ...dies] }
       : f
   );
-
   const newPlayers = [...state.players] as [PlayerState, PlayerState];
   newPlayers[pi] = { ...player, dicePool: newPool, formations: newFormations };
   return { ...state, players: newPlayers };
@@ -1388,8 +1355,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return initializeScenario(action.scenarioId);
     case 'ROLL_DICE':
       return handleRollDice(state);
-    case 'ASSIGN_DIE':
-      return handleAssignDie(state, action.diePoolIndex, action.formationId);
+    case 'ASSIGN_DICE':
+      return handleAssignDice(state, action.diePoolIndices, action.formationId);
     case 'RETURN_DIE':
       return handleReturnDie(state, action.formationId, action.dieIndex);
     case 'END_ROLL_PHASE':
@@ -1407,45 +1374,42 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   }
 }
 
-/** Returns which die values can go on a formation for the current player. */
-export function getValidDieValues(
-  formation: FormationState,
-  card: import('../types').FormationCard,
-): number[] {
-  const values: number[] = [];
-  for (let d = 1; d <= 6; d++) {
-    if (canPlaceDie(d, formation, card.diceArea)) values.push(d);
-  }
-  return values;
-}
-
-/** Returns true if the die at diePoolIndex can be placed on the formation. */
-export function canAssignDie(
+/** Returns true if the selected pool dice can all be assigned to the given formation. */
+export function canAssignDiceSet(
   state: GameState,
   playerIndex: 0 | 1,
-  diePoolIndex: number,
+  diePoolIndices: number[],
   formationId: string,
 ): boolean {
+  if (diePoolIndices.length === 0) return false;
   const player = state.players[playerIndex];
-  const die = player.dicePool[diePoolIndex];
-  if (die === undefined) return false;
+  const dies = diePoolIndices.map(i => player.dicePool[i]);
+  if (dies.some(d => d === undefined)) return false;
+
   const fIdx = player.formations.findIndex(f => f.cardId === formationId);
   if (fIdx === -1) return false;
   const formation = player.formations[fIdx];
-  const card = getCard(formationId);
-  if (!canPlaceDie(die, formation, card.diceArea)) return false;
+  if (!isPlayable(formation)) return false;
 
+  const card = getCard(formationId);
+
+  // Wing slot: free if formation hasn't received dice yet this roll, else already claimed
   const wing = card.wing;
   const alreadyInWing = wingAssignmentCount(player, wing);
   const maxInWing = maxWingAssignments(playerIndex, state, wing);
   if (formation.diceAddedThisRoll.length === 0 && alreadyInWing >= maxInWing) return false;
 
-  // Clinton check
+  // Clinton special rule
   if (card.specialRuleId === 'clinton') {
     const grant = player.formations.find(f => getCard(f.cardId).name === 'Grant');
     const hessians = player.formations.find(f => getCard(f.cardId).name === 'Hessians');
     if (!grant || !hessians || !isActive(grant) || !isActive(hessians)) return false;
   }
 
-  return true;
+  if (card.isSpecial) {
+    if (formation.cubesOnCard + dies.length > (card.specialMax ?? 1)) return false;
+    return validateDiceSetForArea(dies, formation.diceAddedThisRoll, card.diceArea);
+  }
+
+  return validateDiceSetForArea(dies, formation.diceOnCard, card.diceArea);
 }
