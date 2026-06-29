@@ -15,6 +15,7 @@ export type GameAction =
   | { type: 'TAKE_REACTION'; formationId: string; actionIndex: number }
   | { type: 'NO_REACTION' }
   | { type: 'PASS_ACTION' }
+  | { type: 'RETIRE'; formationId: string }
   | { type: 'RESTART' };
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -707,6 +708,41 @@ function handlePassAction(state: GameState): GameState {
   };
 }
 
+function handleRetire(state: GameState, formationId: string): GameState {
+  const pi = state.currentPlayerIndex;
+  const player = state.players[pi];
+  const fIdx = player.formations.findIndex(f => f.cardId === formationId);
+  if (fIdx === -1) return state;
+  const formation = player.formations[fIdx];
+  const card = getCard(formationId);
+  if (!card.retire || !isPlayable(formation)) return state;
+
+  let newPlayer: PlayerState = {
+    ...player,
+    formations: player.formations.map((f, i) =>
+      i === fIdx ? { ...f, isRetired: true, diceOnCard: [], diceAddedThisRoll: [] } : f
+    ),
+  };
+  newPlayer = releaseReserves(newPlayer, card.name);
+
+  const newPlayers = [...state.players] as [PlayerState, PlayerState];
+  newPlayers[pi] = newPlayer;
+
+  const released = newPlayer.formations.filter(
+    f => !player.formations.find(p => p.cardId === f.cardId && !p.inReserve) && !f.inReserve
+  );
+  const releaseMsg = released.length > 0
+    ? ` ${released.map(f => getCard(f.cardId).name).join(', ')} enters from reserve.`
+    : '';
+
+  return {
+    ...state,
+    players: newPlayers,
+    phase: 'roll-phase',
+    log: [...state.log, `${card.name} retires from the field.${releaseMsg}`],
+  };
+}
+
 function handleTakeAction(state: GameState, formationId: string, actionIndex: number): GameState {
   const pi = state.currentPlayerIndex;
   const oppIdx = (1 - pi) as 0 | 1;
@@ -721,9 +757,14 @@ function handleTakeAction(state: GameState, formationId: string, actionIndex: nu
   if (actionIndex >= card.actions.length) return state;
   const action = card.actions[actionIndex];
 
-  if (!meetsRequirement(action, formation)) {
-    // Null action: player takes the action without meeting the requirement.
-    // Dice are cleared without applying any effect, then player proceeds to roll phase.
+  const isReactiveAction = action.actionType === 'Screen'
+    || action.actionType === 'Counterattack'
+    || action.actionType === 'Absorb';
+
+  // Null action: requirement not met, OR reactive action dispatched in action phase
+  // (Screen/Counterattack/Absorb can never be taken proactively, so the only
+  // thing the player can do with dice on such a card is clear them this way)
+  if (!meetsRequirement(action, formation) || isReactiveAction) {
     const hasDice = card.isSpecial ? formation.cubesOnCard > 0 : formation.diceOnCard.length > 0;
     if (!hasDice) return state;
     const nullPlayers = [...state.players] as [PlayerState, PlayerState];
@@ -732,7 +773,7 @@ function handleTakeAction(state: GameState, formationId: string, actionIndex: nu
       ...state,
       players: nullPlayers,
       phase: 'roll-phase',
-      log: [...state.log, `${player.factionName} takes a null action on ${card.name} (requirement not met) — dice cleared.`],
+      log: [...state.log, `${player.factionName} clears dice from ${card.name} (null action).`],
     };
   }
   if (card.isSpecial && formation.cubesOnCard === 0) return state;
@@ -748,8 +789,7 @@ function handleTakeAction(state: GameState, formationId: string, actionIndex: nu
     case 'Screen':
     case 'Counterattack':
     case 'Absorb':
-      // These should only be taken as reactions
-      return state;
+      return state; // unreachable now, but kept for exhaustiveness
   }
 }
 
@@ -1382,6 +1422,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return handleNoReaction(state);
     case 'PASS_ACTION':
       return handlePassAction(state);
+    case 'RETIRE':
+      return handleRetire(state, action.formationId);
     default:
       return state;
   }

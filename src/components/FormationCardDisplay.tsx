@@ -76,25 +76,19 @@ function selectionErrorFor(
 
   switch (da.type) {
     case 'doubles': {
-      if (total !== 2) {
-        const need = 2 - existing.length;
-        return `${card.name} needs ${need} more matching dice (Doubles = exactly 2 matching).`;
-      }
+      if (total < 2) return `${card.name} (Doubles): select ${2 - total} more matching die${2 - total === 1 ? '' : 's'} — need exactly 2 matching.`;
+      if (total > 2) return `${card.name} (Doubles): deselect ${total - 2} — need exactly 2 matching.`;
       return `${card.name}: both dice must show the same value.`;
     }
     case 'triples': {
-      if (total !== 3) {
-        const need = 3 - existing.length;
-        return `${card.name} needs ${need} more matching dice (Triples = exactly 3 matching).`;
-      }
+      if (total < 3) return `${card.name} (Triples): select ${3 - total} more matching die${3 - total === 1 ? '' : 's'} — need exactly 3 matching.`;
+      if (total > 3) return `${card.name} (Triples): deselect ${total - 3} — need exactly 3 matching.`;
       return `${card.name}: all three dice must show the same value.`;
     }
     case 'straight': {
       const count = da.count!;
-      if (total !== count) {
-        const need = count - existing.length;
-        return `${card.name} needs ${need} more dice forming a Straight-${count} (consecutive values).`;
-      }
+      if (total < count) return `${card.name} (Straight-${count}): select ${count - total} more consecutive die${count - total === 1 ? '' : 's'}.`;
+      if (total > count) return `${card.name} (Straight-${count}): deselect ${total - count} — need exactly ${count} consecutive.`;
       return `${card.name}: dice must form a consecutive sequence (e.g. 2-3-4-5).`;
     }
     case 'values':
@@ -401,8 +395,13 @@ export default function FormationCardDisplay({
             const reqMet = checkRequirement(action, formation, card);
             const reactionOpt = reactionOptions.find(r => r.actionIndex === i);
 
+            const isReactiveType = action.actionType === 'Screen'
+              || action.actionType === 'Counterattack'
+              || action.actionType === 'Absorb';
             const canClickAction = isMyTurn && isActiveType && hasDiceOrCubes && reqMet;
-            const canNullAction = isMyTurn && isActiveType && hasDiceOrCubes && !reqMet;
+            const canNullAction = isMyTurn && hasDiceOrCubes && (
+              (isActiveType && !reqMet) || isReactiveType
+            );
             const canClickReaction = isReactionTarget && !!reactionOpt;
             const isClickable = canClickAction || canNullAction || canClickReaction;
 
@@ -508,6 +507,31 @@ export default function FormationCardDisplay({
               </button>
             );
           })}
+
+          {/* ── Retire button ── */}
+          {card.retire && isMyTurn && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: 'RETIRE', formationId: card.id });
+              }}
+              className="text-left rounded transition-all mt-0.5"
+              style={{
+                background: 'rgba(100,80,140,0.18)',
+                border: '1px solid rgba(130,100,180,0.45)',
+                padding: '3px 5px',
+                lineHeight: '1.35',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(100,80,140,0.32)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(100,80,140,0.18)'; }}
+              title="Voluntarily retire this formation — releases any formations in reserve behind it"
+            >
+              <span style={{ color: '#a080d0', fontSize: '0.68rem', fontWeight: 700 }}>Retire</span>
+              <div style={{ color: '#7060a0', fontSize: '0.6rem', marginTop: '1px' }}>
+                Leave play voluntarily — releases reserve
+              </div>
+            </button>
+          )}
         </div>
 
       </div>

@@ -691,6 +691,7 @@ export const CARDS: FormationCard[] = [
       { actionType: 'Screen', requirement: 'Pair', targets: ['Pompey', 'Labienus'], description: 'Cancel attack from Pompey or Labienus.' },
     ],
     retire: true,
+    specialRuleText: "When this formation leaves play (by routing OR by voluntarily retiring), The Fourth Line immediately enters from reserve.",
     flavorText: "Caesar peeled off some infantry to form a fourth line hidden behind his horse. Once his horse was routed, the fourth line surprised Labienus, routing an army that outnumbered his nearly two to one.",
   },
   {
