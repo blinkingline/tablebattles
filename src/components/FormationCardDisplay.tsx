@@ -343,8 +343,7 @@ export default function FormationCardDisplay({
         </div>
 
         {/* ── Dice on card (always visible) ── */}
-        {!card.isSpecial && (
-          <div className="flex flex-wrap gap-1 mb-1 items-center" style={{ minHeight: '1.75rem' }}>
+        <div className="flex flex-wrap gap-1 mb-1 items-center" style={{ minHeight: '1.75rem' }}>
             {formation.diceOnCard.length > 0
               ? formation.diceOnCard.map((val, i) => (
                   <button
@@ -381,8 +380,7 @@ export default function FormationCardDisplay({
                 ← assign
               </span>
             )}
-          </div>
-        )}
+        </div>
 
         {/* ── Special rule text ── */}
         {card.specialRuleText && (
