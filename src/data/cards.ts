@@ -451,7 +451,7 @@ export const CARDS: FormationCard[] = [
       { actionType: 'Attack', targets: ['Oxford', 'Richmond'], hitsPerDie: true, selfHit: true, description: '1 hit per die. 1 self per action.' },
       { actionType: 'Command', requirement: 'Full House', commandTarget: 'Northumberland', description: 'Bring Northumberland out of reserve.' },
     ],
-    specialRuleText: 'While in play, York may place dice on TWO Blue cards and ONE Dark Blue card each turn.',
+    specialRuleText: 'While in play, York may place dice on TWO Blue Wing cards each turn. (The one Dark Blue card slot is, historically, going to remain empty.)',
     specialRuleId: 'king-richard-iii',
     flavorText: 'The future Henry VII gained his kingdom by winning this battle, not by trading Richard a horse.',
   },
@@ -471,7 +471,7 @@ export const CARDS: FormationCard[] = [
   {
     id: '35A',
     name: 'Northumberland',
-    wing: 'DkBlue',
+    wing: 'Blue',
     strength: 6,
     isSpecial: false,
     isStarred: false,
