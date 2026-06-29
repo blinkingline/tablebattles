@@ -1303,7 +1303,14 @@ function handleTakeReaction(state: GameState, formationId: string, actionIndex: 
 function handleNoReaction(state: GameState): GameState {
   if (!state.pendingAction) return state;
 
-  // All reactions in Table Battles are voluntary — the defender always chooses whether to react.
+  // Reactions are mandatory unless the card explicitly marks them voluntary (e.g. Wolfe, Montcalm).
+  // If any available reaction is mandatory, the defender cannot decline.
+  const hasMandatoryReaction = state.availableReactions.some(r => {
+    const card = getCard(r.formationId);
+    const action = card.actions[r.actionIndex];
+    return action.voluntary !== true;
+  });
+  if (hasMandatoryReaction) return state;
 
   const pending = state.pendingAction;
   const oppIdx = (1 - pending.actingPlayerIndex) as 0 | 1;

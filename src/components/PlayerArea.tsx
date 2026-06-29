@@ -99,7 +99,7 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
               </div>
               {state.availableReactions.every(r => {
                 const c = getCard(r.formationId);
-                return c.actions[r.actionIndex]?.voluntary !== false;
+                return c.actions[r.actionIndex]?.voluntary === true;
               }) && (
                 <button
                   onClick={() => dispatch({ type: 'NO_REACTION' })}
