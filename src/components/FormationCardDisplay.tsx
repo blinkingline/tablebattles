@@ -1,6 +1,7 @@
 import type { FormationCard, FormationState, GameState, FormationAction, DiceArea } from '../types';
 import type { GameAction } from '../engine/gameReducer';
 import { canAssignDiceSet } from '../engine/gameReducer';
+import { getCard } from '../data/cards';
 
 interface Props {
   card: FormationCard;
@@ -207,8 +208,25 @@ export default function FormationCardDisplay({
       dispatch({ type: 'ASSIGN_DICE', diePoolIndices: selectedDieIndices, formationId: card.id });
       onDieSelected([]);
     } else if (isAssignCandidate) {
-      const selectedDice = selectedDieIndices.map(i => state.players[playerIndex].dicePool[i]);
-      onAssignError(selectionErrorFor(selectedDice, formation, card));
+      const player = state.players[playerIndex];
+      const selectedDice = selectedDieIndices.map(i => player.dicePool[i]);
+
+      // Check if the block is a wing conflict rather than a dice pattern issue
+      const wingConflict = formation.diceAddedThisRoll.length === 0
+        ? player.formations.find(f =>
+            f.cardId !== card.id &&
+            getCard(f.cardId).wing === card.wing &&
+            f.diceAddedThisRoll.length > 0
+          )
+        : null;
+
+      if (wingConflict) {
+        onAssignError(
+          `${card.wing} wing already used — you assigned dice to ${getCard(wingConflict.cardId).name} this roll phase.`
+        );
+      } else {
+        onAssignError(selectionErrorFor(selectedDice, formation, card));
+      }
     }
   }
 
