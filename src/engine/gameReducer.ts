@@ -350,13 +350,13 @@ function findScreenReactions(
       if (a.actionType !== 'Screen') return;
       if (!a.targets) return;
       const matches = a.targets.includes('Any') || a.targets.includes(attackerName);
-      if (matches) {
-        reactions.push({
-          formationId: f.cardId,
-          actionIndex: idx,
-          label: `${card.name}: Screen (cancels attack)`,
-        });
-      }
+      if (!matches) return;
+      if (a.requirement && !meetsRequirement(a, f)) return;
+      reactions.push({
+        formationId: f.cardId,
+        actionIndex: idx,
+        label: `${card.name}: Screen (cancels attack)`,
+      });
     });
   }
   return reactions;
