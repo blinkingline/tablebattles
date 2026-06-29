@@ -151,6 +151,13 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
         </div>
       )}
 
+      {/* Skipped action notice */}
+      {isActive && isRollPhase && isCurrentPlayer && state.skippedActionPhase && (
+        <div className="text-xs italic px-2 py-1 rounded" style={{ color: '#9a8c7e', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          No action this turn — you reacted during your opponent's last turn.
+        </div>
+      )}
+
       {/* Roll Phase controls (roll button + end phase) */}
       {isActive && (
         <DiceRoller

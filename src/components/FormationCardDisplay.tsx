@@ -1,4 +1,4 @@
-import type { FormationCard, FormationState, GameState } from '../types';
+import type { FormationCard, FormationState, GameState, FormationAction } from '../types';
 import type { GameAction } from '../engine/gameReducer';
 import { canAssignDie } from '../engine/gameReducer';
 
@@ -11,6 +11,31 @@ interface Props {
   isActive: boolean; // this player's active turn
   selectedDieIndex: number | null;
   onDieSelected: (index: number | null) => void;
+}
+
+function diceFreq(dice: number[]): Record<number, number> {
+  const counts: Record<number, number> = {};
+  for (const d of dice) counts[d] = (counts[d] ?? 0) + 1;
+  return counts;
+}
+
+function checkRequirement(action: FormationAction, formation: FormationState, card: FormationCard): boolean {
+  if (card.isSpecial) return formation.cubesOnCard >= 1;
+  if (formation.diceOnCard.length === 0) return false;
+  const dice = formation.diceOnCard;
+  const req = action.requirement;
+  if (!req) return true;
+  switch (req) {
+    case 'Pair': return Object.values(diceFreq(dice)).some(c => c >= 2);
+    case 'Two Pairs': return Object.values(diceFreq(dice)).filter(c => c >= 2).length >= 2;
+    case 'Triplet': return Object.values(diceFreq(dice)).some(c => c >= 3);
+    case 'Two Triplets': return Object.values(diceFreq(dice)).filter(c => c >= 3).length >= 2;
+    case 'Full House': {
+      const vals = Object.entries(diceFreq(dice));
+      return vals.some(([, c]) => c >= 3) && vals.filter(([, c]) => c >= 2).length >= 2;
+    }
+    case 'Five Dice': return dice.length >= 5;
+  }
 }
 
 const WING_COLORS: Record<string, string> = {
@@ -65,9 +90,13 @@ export default function FormationCardDisplay({
   const reactionOptions = state.availableReactions.filter(r => r.formationId === card.id);
   const isReactionTarget = isActive && isReactionPhase && !isCurrentPlayer && reactionOptions.length > 0;
 
-  // Active formation can take an action
-  const canTakeAction = isActive && isActionPhase && isCurrentPlayer && !isDead && !inReserve
-    && (card.isSpecial ? formation.cubesOnCard > 0 : formation.diceOnCard.length > 0);
+  // Active formation can take an action (has dice/cubes and at least one requirement met)
+  const hasDiceOrCubes = card.isSpecial ? formation.cubesOnCard > 0 : formation.diceOnCard.length > 0;
+  const canTakeAction = isActive && isActionPhase && isCurrentPlayer && !isDead && !inReserve && hasDiceOrCubes
+    && card.actions.some(a =>
+      (a.actionType === 'Attack' || a.actionType === 'Bombard' || a.actionType === 'Command')
+      && checkRequirement(a, formation, card)
+    );
 
   const wingColor = WING_COLORS[card.wing] ?? '#888';
   const wingBg = WING_BG[card.wing] ?? 'rgba(128,128,128,0.1)';
@@ -219,31 +248,42 @@ export default function FormationCardDisplay({
           </div>
         )}
 
-        {/* Actions */}
-        {canTakeAction && (
+        {/* Actions — shown during action phase for current player's formations */}
+        {isActive && isActionPhase && isCurrentPlayer && !isDead && !inReserve && (
           <div className="mt-1 flex flex-col gap-1">
             {card.actions.map((action, i) => {
-              const isAttackOrBombard = action.actionType === 'Attack' || action.actionType === 'Bombard' || action.actionType === 'Command';
-              if (!isAttackOrBombard) return null;
+              const isActiveAction = action.actionType === 'Attack' || action.actionType === 'Bombard' || action.actionType === 'Command';
+              if (!isActiveAction) return null;
+              const reqMet = checkRequirement(action, formation, card);
+              const hasDiceOrCubes = card.isSpecial ? formation.cubesOnCard > 0 : formation.diceOnCard.length > 0;
+              const canClick = hasDiceOrCubes && reqMet;
+              const reqLabel = action.requirement ? ` [${action.requirement}]` : '';
+              const targetLabel = action.targets && action.targets.length > 0 && action.actionType !== 'Bombard'
+                ? ` → ${action.targets.join(' / ')}`
+                : '';
               return (
                 <button
                   key={i}
-                  onClick={(e) => { e.stopPropagation(); handleActionClick(i); }}
+                  onClick={(e) => { e.stopPropagation(); if (canClick) handleActionClick(i); }}
                   className="text-xs rounded px-2 py-1 font-semibold text-left transition-all"
                   style={{
-                    background: 'rgba(201,168,76,0.15)',
-                    border: '1px solid rgba(201,168,76,0.4)',
-                    color: '#c9a84c',
+                    background: canClick ? 'rgba(201,168,76,0.15)' : 'rgba(100,100,100,0.1)',
+                    border: canClick ? '1px solid rgba(201,168,76,0.4)' : '1px solid rgba(100,100,100,0.25)',
+                    color: canClick ? '#c9a84c' : '#6b5d52',
+                    cursor: canClick ? 'pointer' : 'not-allowed',
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(201,168,76,0.3)';
+                    if (canClick) (e.currentTarget as HTMLElement).style.background = 'rgba(201,168,76,0.3)';
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(201,168,76,0.15)';
+                    (e.currentTarget as HTMLElement).style.background = canClick ? 'rgba(201,168,76,0.15)' : 'rgba(100,100,100,0.1)';
                   }}
-                  title={action.description}
+                  title={action.description + (canClick ? '' : reqMet ? ' (no dice on card)' : ` (need ${action.requirement})`)}
                 >
-                  {action.actionType}: {action.description}
+                  <span className="font-bold">{action.actionType}</span>
+                  {reqLabel && <span style={{ color: canClick ? '#e8c060' : '#5a4d42' }}>{reqLabel}</span>}
+                  {targetLabel && <span style={{ color: canClick ? '#a8d0e8' : '#4a4040', fontSize: '0.65rem' }}>{targetLabel}</span>}
+                  <div style={{ opacity: 0.8, fontWeight: 'normal', marginTop: '1px' }}>{action.description}</div>
                 </button>
               );
             })}

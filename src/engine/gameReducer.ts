@@ -1303,13 +1303,7 @@ function handleTakeReaction(state: GameState, formationId: string, actionIndex: 
 function handleNoReaction(state: GameState): GameState {
   if (!state.pendingAction) return state;
 
-  // Verify all reactions are voluntary before allowing no-reaction
-  const nonVoluntary = state.availableReactions.some(r => {
-    const card = getCard(r.formationId);
-    const action = card.actions[r.actionIndex];
-    return !action.voluntary;
-  });
-  if (nonVoluntary) return state; // can't skip mandatory reactions
+  // All reactions in Table Battles are voluntary — the defender always chooses whether to react.
 
   const pending = state.pendingAction;
   const oppIdx = (1 - pending.actingPlayerIndex) as 0 | 1;
