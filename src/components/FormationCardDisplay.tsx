@@ -57,10 +57,10 @@ function diceAreaLabel(card: FormationCard): string {
   switch (da.type) {
     case 'values': {
       const vals = da.values!.join('/');
-      return da.bracketed ? `(${vals})` : vals;
+      return da.bracketed ? `${vals} (max 1 die)` : vals;
     }
-    case 'doubles': return 'Doubles';
-    case 'triples': return 'Triples';
+    case 'doubles': return 'Doubles (2 matching)';
+    case 'triples': return 'Triples (3 matching)';
     case 'straight': return `Straight ${da.count}`;
     case 'any': return 'Any';
   }
