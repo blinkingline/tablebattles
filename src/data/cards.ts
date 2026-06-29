@@ -1310,6 +1310,8 @@ export const CARDS: FormationCard[] = [
       { actionType: 'Attack', targets: ['Home Ridge', 'British Troops'], hitsPerDie: true, selfHit: true, description: '1 hit per die. 1 self per action.' },
       { actionType: 'Command', requirement: 'Triplet', commandTarget: "Pauloff's Left", description: "Bring Pauloff's Left out of reserve. Add 1 Morale Cube to Russian side." },
     ],
+    reserve: 'Soimonoff',
+    reserveCommanded: true,
     specialRuleId: 'pauloffs-right',
   },
   {
