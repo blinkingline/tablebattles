@@ -8,7 +8,7 @@ interface Props {
   state: GameState;
   playerIndex: 0 | 1;
   dispatch: (action: GameAction) => void;
-  isActive: boolean; // this player's active turn
+  isActive: boolean;
   selectedDieIndex: number | null;
   onDieSelected: (index: number | null) => void;
 }
@@ -61,8 +61,28 @@ function diceAreaLabel(card: FormationCard): string {
     }
     case 'doubles': return 'Doubles';
     case 'triples': return 'Triples';
-    case 'straight': return `Straight (${da.count})`;
+    case 'straight': return `Straight ${da.count}`;
     case 'any': return 'Any';
+  }
+}
+
+function actionTargetLine(action: FormationAction): string | null {
+  const cmd = action.commandTarget;
+  const tgts = action.targets;
+  switch (action.actionType) {
+    case 'Attack':
+    case 'Bombard':
+      return tgts && tgts.length > 0 ? `→ ${tgts.join(' / ')}` : null;
+    case 'Screen':
+      return tgts ? `blocks: ${tgts.join(' / ')}` : null;
+    case 'Counterattack':
+      return tgts ? `vs: ${tgts.join(' / ')}` : null;
+    case 'Absorb':
+      return tgts ? `for: ${tgts.join(' / ')}` : null;
+    case 'Command':
+      return cmd ? `→ ${cmd}` : (tgts ? `→ ${tgts.join(' / ')}` : null);
+    default:
+      return null;
   }
 }
 
@@ -80,19 +100,17 @@ export default function FormationCardDisplay({
   const isReactionPhase = state.phase === 'awaiting-reaction';
   const isCurrentPlayer = state.currentPlayerIndex === playerIndex;
 
-  // Can this formation receive the selected die?
   const canReceiveDie = isActive && isRollPhase && isCurrentPlayer &&
     selectedDieIndex !== null &&
     canAssignDie(state, playerIndex, selectedDieIndex, card.id);
 
-  // Check if any action is available during action phase
-  // Is this formation a valid reaction target?
   const reactionOptions = state.availableReactions.filter(r => r.formationId === card.id);
   const isReactionTarget = isActive && isReactionPhase && !isCurrentPlayer && reactionOptions.length > 0;
 
-  // Active formation can take an action (has dice/cubes and at least one requirement met)
   const hasDiceOrCubes = card.isSpecial ? formation.cubesOnCard > 0 : formation.diceOnCard.length > 0;
-  const canTakeAction = isActive && isActionPhase && isCurrentPlayer && !isDead && !inReserve && hasDiceOrCubes
+  // Whether this card's active player can act from it right now
+  const isMyTurn = isActive && isActionPhase && isCurrentPlayer && !isDead && !inReserve;
+  const canTakeAction = isMyTurn && hasDiceOrCubes
     && card.actions.some(a =>
       (a.actionType === 'Attack' || a.actionType === 'Bombard' || a.actionType === 'Command')
       && checkRequirement(a, formation, card)
@@ -109,8 +127,12 @@ export default function FormationCardDisplay({
     : canTakeAction
     ? '2px solid rgba(201,168,76,0.8)'
     : '1px solid rgba(255,255,255,0.1)';
-  const cardGlow = canTakeAction && !canReceiveDie && !isReactionTarget
-    ? '0 0 10px rgba(201,168,76,0.35)'
+  const cardGlow = (canTakeAction || canReceiveDie || isReactionTarget)
+    ? canReceiveDie
+      ? '0 0 12px rgba(201,168,76,0.5)'
+      : isReactionTarget
+      ? '0 0 12px rgba(74,156,94,0.4)'
+      : '0 0 10px rgba(201,168,76,0.35)'
     : undefined;
 
   function handleCardClick() {
@@ -118,7 +140,6 @@ export default function FormationCardDisplay({
       const pool = state.players[playerIndex].dicePool;
       const dieValue = pool[selectedDieIndex];
       dispatch({ type: 'ASSIGN_DIE', diePoolIndex: selectedDieIndex, formationId: card.id });
-      // Auto-select next same-value die so user can keep placing without re-clicking pool
       const nextIdx = pool.findIndex((v, i) => v === dieValue && i !== selectedDieIndex);
       if (nextIdx !== -1) {
         onDieSelected(nextIdx > selectedDieIndex ? nextIdx - 1 : nextIdx);
@@ -134,111 +155,111 @@ export default function FormationCardDisplay({
     }
   }
 
-  function handleActionClick(actionIndex: number) {
-    dispatch({ type: 'TAKE_ACTION', formationId: card.id, actionIndex });
-  }
-
-  function handleReactionClick(actionIndex: number) {
-    dispatch({ type: 'TAKE_REACTION', formationId: card.id, actionIndex });
-  }
-
   return (
     <div
-      className="rounded-lg p-3 text-xs cursor-pointer select-none transition-all"
+      className="rounded-lg select-none transition-all"
       style={{
         background: wingBg,
         border: cardBorder,
         boxShadow: cardGlow,
         opacity: cardOpacity,
-        minWidth: '160px',
-        maxWidth: '200px',
+        width: '190px',
         position: 'relative',
+        cursor: canReceiveDie ? 'pointer' : 'default',
       }}
       onClick={canReceiveDie ? handleCardClick : undefined}
-      title={canReceiveDie ? `Assign die to ${card.name}` : card.name}
+      title={canReceiveDie ? `Assign die to ${card.name}` : undefined}
     >
-      {/* Wing indicator */}
+      {/* Wing colour bar */}
       <div
         className="absolute top-0 left-0 bottom-0 w-1.5 rounded-l-lg"
         style={{ background: wingColor }}
       />
 
-      <div className="pl-1.5">
-        {/* Header */}
+      <div className="pl-2 pr-2 pt-2 pb-1.5">
+
+        {/* ── Header ── */}
         <div className="flex items-start justify-between gap-1 mb-1">
-          <div>
-            <span className="font-bold text-sm leading-tight" style={{ color: '#e8e0d0' }}>
+          <div className="flex items-center gap-1 flex-wrap min-w-0">
+            <span className="font-bold leading-tight" style={{ color: '#e8e0d0', fontSize: '0.8rem' }}>
               {card.name}
             </span>
             {card.isStarred && (
-              <span className="ml-1" style={{ color: '#c9a84c' }} title="Starred — 2 Morale on rout">★</span>
+              <span style={{ color: '#c9a84c', fontSize: '0.75rem' }} title="Starred — 2 Morale on rout">★</span>
             )}
           </div>
-          <span className="text-xs font-mono shrink-0" style={{ color: wingColor }}>
+          <span className="font-mono shrink-0 mt-px" style={{ color: wingColor, fontSize: '0.65rem' }}>
             {card.wing}
           </span>
         </div>
 
-        {/* Status badges */}
+        {/* ── Status ── */}
         {(isDead || inReserve) && (
-          <div className="mb-1">
-            {isRouted && <span className="text-xs font-bold" style={{ color: '#e05c5c' }}>ROUTED</span>}
-            {isRetired && <span className="text-xs font-bold" style={{ color: '#9a8c7e' }}>RETIRED</span>}
-            {hasPursued && <span className="text-xs font-bold" style={{ color: '#9a8c7e' }}>PURSUED</span>}
-            {inReserve && !isDead && <span className="text-xs font-bold" style={{ color: '#6b9ebc' }}>IN RESERVE</span>}
+          <div className="mb-1 text-xs font-bold">
+            {isRouted && <span style={{ color: '#e05c5c' }}>ROUTED</span>}
+            {isRetired && <span style={{ color: '#9a8c7e' }}>RETIRED</span>}
+            {hasPursued && <span style={{ color: '#9a8c7e' }}>PURSUED</span>}
+            {inReserve && !isDead && <span style={{ color: '#6b9ebc' }}>IN RESERVE</span>}
           </div>
         )}
 
-        {/* Strength / Units */}
+        {/* ── Strength ── */}
         {card.isSpecial ? (
           <div className="flex items-center gap-1 mb-1">
-            <span style={{ color: '#9a8c7e' }}>Special {card.specialMax === 1 ? 'I' : card.specialMax === 2 ? 'II' : 'III'}</span>
-            <div className="flex gap-0.5 ml-1">
-              {Array.from({ length: formation.cubesOnCard }).map((_, i) => (
-                <div key={i} className="w-3 h-3 rounded-sm" style={{ background: '#c9a84c' }} title="Cube" />
-              ))}
-              {Array.from({ length: Math.max(0, (card.specialMax ?? 1) - formation.cubesOnCard) }).map((_, i) => (
-                <div key={i} className="w-3 h-3 rounded-sm" style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)' }} />
+            <span style={{ color: '#9a8c7e', fontSize: '0.65rem' }}>
+              Sp.{card.specialMax === 1 ? 'I' : card.specialMax === 2 ? 'II' : 'III'}
+            </span>
+            <div className="flex gap-0.5">
+              {Array.from({ length: card.specialMax ?? 1 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-2.5 h-2.5 rounded-sm"
+                  style={
+                    i < formation.cubesOnCard
+                      ? { background: '#c9a84c' }
+                      : { background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }
+                  }
+                />
               ))}
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-0.5 mb-1">
+          <div className="flex items-center gap-0.5 mb-1 flex-wrap">
             {Array.from({ length: card.strength }).map((_, i) => (
               <div
                 key={i}
-                className="w-3 h-3 rounded-sm"
+                className="w-2.5 h-2.5 rounded-sm"
                 style={{
-                  background: i < formation.unitsRemaining ? '#8eb8d0' : 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.15)',
+                  background: i < formation.unitsRemaining ? '#8eb8d0' : 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.12)',
                 }}
-                title={i < formation.unitsRemaining ? 'Unit' : 'Lost'}
               />
             ))}
-            <span className="ml-1" style={{ color: '#9a8c7e' }}>
+            <span className="ml-0.5" style={{ color: '#9a8c7e', fontSize: '0.65rem' }}>
               {formation.unitsRemaining}/{card.strength}
             </span>
           </div>
         )}
 
-        {/* Dice area */}
-        <div className="mb-1">
-          <span style={{ color: '#9a8c7e' }}>Dice Area: </span>
-          <span style={{ color: '#c9a84c' }}>{diceAreaLabel(card)}</span>
+        {/* ── Dice area ── */}
+        <div className="mb-1 flex items-center gap-1">
+          <span style={{ color: '#9a8c7e', fontSize: '0.65rem' }}>Dice area:</span>
+          <span style={{ color: '#c9a84c', fontSize: '0.7rem', fontWeight: 600 }}>{diceAreaLabel(card)}</span>
         </div>
 
-        {/* Dice on card */}
+        {/* ── Dice on card ── */}
         {formation.diceOnCard.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-1">
             {formation.diceOnCard.map((val, i) => (
               <button
                 key={i}
                 onClick={(e) => { e.stopPropagation(); handleDieOnCardClick(i); }}
-                className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center"
+                className="w-6 h-6 rounded font-bold flex items-center justify-center"
                 style={{
                   background: 'rgba(201,168,76,0.25)',
                   border: '1px solid rgba(201,168,76,0.6)',
                   color: '#c9a84c',
+                  fontSize: '0.75rem',
                   cursor: isActive && isRollPhase && isCurrentPlayer ? 'pointer' : 'default',
                 }}
                 title={isActive && isRollPhase && isCurrentPlayer ? `Return ${val} to pool` : `Die: ${val}`}
@@ -249,80 +270,133 @@ export default function FormationCardDisplay({
           </div>
         )}
 
-        {/* Special rule text */}
+        {/* ── Special rule text ── */}
         {card.specialRuleText && (
-          <div className="mb-1 text-xs italic leading-snug" style={{ color: '#7a9ea8' }}>
+          <div className="mb-1.5 italic leading-snug" style={{ color: '#7a9ea8', fontSize: '0.6rem' }}>
             {card.specialRuleText}
           </div>
         )}
 
-        {/* Actions — shown during action phase for current player's formations */}
-        {isActive && isActionPhase && isCurrentPlayer && !isDead && !inReserve && (
-          <div className="mt-1 flex flex-col gap-1">
-            {card.actions.map((action, i) => {
-              const isActiveAction = action.actionType === 'Attack' || action.actionType === 'Bombard' || action.actionType === 'Command';
-              if (!isActiveAction) return null;
-              const reqMet = checkRequirement(action, formation, card);
-              const hasDiceOrCubes = card.isSpecial ? formation.cubesOnCard > 0 : formation.diceOnCard.length > 0;
-              const canClick = hasDiceOrCubes && reqMet;
-              const reqLabel = action.requirement ? ` [${action.requirement}]` : '';
-              const targetLabel = action.targets && action.targets.length > 0 && action.actionType !== 'Bombard'
-                ? ` → ${action.targets.join(' / ')}`
-                : '';
-              return (
-                <button
-                  key={i}
-                  onClick={(e) => { e.stopPropagation(); if (canClick) handleActionClick(i); }}
-                  className="text-xs rounded px-2 py-1 font-semibold text-left transition-all"
-                  style={{
-                    background: canClick ? 'rgba(201,168,76,0.15)' : 'rgba(100,100,100,0.1)',
-                    border: canClick ? '1px solid rgba(201,168,76,0.4)' : '1px solid rgba(100,100,100,0.25)',
-                    color: canClick ? '#c9a84c' : '#6b5d52',
-                    cursor: canClick ? 'pointer' : 'not-allowed',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (canClick) (e.currentTarget as HTMLElement).style.background = 'rgba(201,168,76,0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = canClick ? 'rgba(201,168,76,0.15)' : 'rgba(100,100,100,0.1)';
-                  }}
-                  title={action.description + (canClick ? '' : reqMet ? ' (no dice on card)' : ` (need ${action.requirement})`)}
-                >
-                  <span className="font-bold">{action.actionType}</span>
-                  {reqLabel && <span style={{ color: canClick ? '#e8c060' : '#5a4d42' }}>{reqLabel}</span>}
-                  {targetLabel && <span style={{ color: canClick ? '#a8d0e8' : '#4a4040', fontSize: '0.65rem' }}>{targetLabel}</span>}
-                  <div style={{ opacity: 0.8, fontWeight: 'normal', marginTop: '1px' }}>{action.description}</div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {/* ── Divider ── */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', marginBottom: '5px' }} />
 
-        {/* Reactions */}
-        {isReactionTarget && (
-          <div className="mt-1 flex flex-col gap-1">
-            {reactionOptions.map((r, i) => (
+        {/* ── Actions (always shown) ── */}
+        <div className="flex flex-col gap-1">
+          {card.actions.map((action, i) => {
+            const isActiveType = action.actionType === 'Attack'
+              || action.actionType === 'Bombard'
+              || action.actionType === 'Command';
+            const reqMet = checkRequirement(action, formation, card);
+            const reactionOpt = reactionOptions.find(r => r.actionIndex === i);
+
+            const canClickAction = isMyTurn && isActiveType && hasDiceOrCubes && reqMet;
+            const canClickReaction = isReactionTarget && !!reactionOpt;
+            const isClickable = canClickAction || canClickReaction;
+
+            // Colour scheme per state
+            let bg: string, border: string, typeColor: string, detailColor: string, descColor: string;
+            if (canClickAction) {
+              bg = 'rgba(201,168,76,0.14)';
+              border = '1px solid rgba(201,168,76,0.45)';
+              typeColor = '#d4a840';
+              detailColor = '#a89060';
+              descColor = '#b09860';
+            } else if (canClickReaction) {
+              bg = 'rgba(74,156,94,0.18)';
+              border = '1px solid rgba(74,156,94,0.5)';
+              typeColor = '#4ab870';
+              detailColor = '#3a9458';
+              descColor = '#3a8850';
+            } else if (!isActiveType) {
+              // Reaction-type action, not currently triggerable
+              bg = 'rgba(40,65,90,0.25)';
+              border = '1px solid rgba(60,90,120,0.3)';
+              typeColor = '#5a80a0';
+              detailColor = '#4a6070';
+              descColor = '#4a6070';
+            } else if (isMyTurn && isActiveType && hasDiceOrCubes && !reqMet) {
+              // Active type, has dice, but req not met — show why
+              bg = 'rgba(120,60,40,0.15)';
+              border = '1px solid rgba(150,80,60,0.3)';
+              typeColor = '#8b5540';
+              detailColor = '#704535';
+              descColor = '#704535';
+            } else {
+              // Inactive / other player / no dice
+              bg = 'rgba(40,40,40,0.3)';
+              border = '1px solid rgba(80,80,80,0.2)';
+              typeColor = '#604840';
+              detailColor = '#504038';
+              descColor = '#504038';
+            }
+
+            const reqLabel = action.requirement ? ` [${action.requirement}]` : '';
+            const targetLine = actionTargetLine(action);
+            const optLabel = action.voluntary ? ' (optional)' : '';
+
+            return (
               <button
                 key={i}
-                onClick={(e) => { e.stopPropagation(); handleReactionClick(r.actionIndex); }}
-                className="text-xs rounded px-2 py-1 font-semibold text-left transition-all"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (canClickAction) dispatch({ type: 'TAKE_ACTION', formationId: card.id, actionIndex: i });
+                  else if (canClickReaction) dispatch({ type: 'TAKE_REACTION', formationId: card.id, actionIndex: i });
+                }}
+                className="text-left rounded transition-all"
                 style={{
-                  background: 'rgba(74,156,94,0.2)',
-                  border: '1px solid rgba(74,156,94,0.5)',
-                  color: '#4a9c5e',
+                  background: bg,
+                  border,
+                  cursor: isClickable ? 'pointer' : 'default',
+                  padding: '3px 5px',
+                  lineHeight: '1.35',
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(74,156,94,0.35)';
+                  if (canClickAction) (e.currentTarget as HTMLElement).style.background = 'rgba(201,168,76,0.28)';
+                  else if (canClickReaction) (e.currentTarget as HTMLElement).style.background = 'rgba(74,156,94,0.32)';
                 }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(74,156,94,0.2)';
-                }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bg; }}
+                disabled={!isClickable}
+                title={
+                  isMyTurn && isActiveType && hasDiceOrCubes && !reqMet
+                    ? `Need ${action.requirement}`
+                    : action.description
+                }
               >
-                {r.label}
+                {/* Type + requirement */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', flexWrap: 'wrap' }}>
+                  <span style={{ color: typeColor, fontSize: '0.68rem', fontWeight: 700 }}>
+                    {action.actionType}
+                  </span>
+                  {reqLabel && (
+                    <span style={{ color: detailColor, fontSize: '0.62rem', fontWeight: 600 }}>
+                      {reqLabel}
+                    </span>
+                  )}
+                  {optLabel && (
+                    <span style={{ color: detailColor, fontSize: '0.58rem', fontStyle: 'italic' }}>
+                      {optLabel}
+                    </span>
+                  )}
+                  {/* Unmet requirement indicator */}
+                  {isMyTurn && isActiveType && hasDiceOrCubes && !reqMet && action.requirement && (
+                    <span style={{ color: '#c05030', fontSize: '0.6rem' }}>✗ need {action.requirement}</span>
+                  )}
+                </div>
+                {/* Target line */}
+                {targetLine && (
+                  <div style={{ color: '#7aaccc', fontSize: '0.6rem', marginTop: '1px' }}>
+                    {targetLine}
+                  </div>
+                )}
+                {/* Description */}
+                <div style={{ color: descColor, fontSize: '0.6rem', marginTop: '1px' }}>
+                  {action.description}
+                </div>
               </button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
+
       </div>
     </div>
   );
