@@ -28,6 +28,13 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
   const pendingAction = state.pendingAction;
   const isPendingDefender = isReactionPhase && pendingAction?.actingPlayerIndex === opponentIndex;
 
+  // Whether any formation has dice/cubes and can act this action phase
+  const hasAnyAction = isActionPhase && canAct && player.formations.some(f => {
+    const c = getCard(f.cardId);
+    if (f.isRouted || f.isRetired || f.hasPursued || f.inReserve) return false;
+    return c.isSpecial ? f.cubesOnCard > 0 : f.diceOnCard.length > 0;
+  });
+
   function handleDieClick(poolIndex: number) {
     if (!isActive || !isRollPhase || !isCurrentPlayer) return;
     if (selectedDieIndex === poolIndex) {
@@ -74,12 +81,12 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
               onClick={() => dispatch({ type: 'PASS_ACTION' })}
               className="px-3 py-1.5 rounded text-xs font-semibold transition-all"
               style={{
-                background: 'rgba(100,100,180,0.15)',
-                border: '1px solid rgba(100,100,180,0.4)',
-                color: '#8080cc',
+                background: hasAnyAction ? 'rgba(100,100,180,0.15)' : 'rgba(180,80,80,0.15)',
+                border: hasAnyAction ? '1px solid rgba(100,100,180,0.4)' : '1px solid rgba(180,80,80,0.4)',
+                color: hasAnyAction ? '#8080cc' : '#e88',
               }}
             >
-              Pass Action → Roll Phase
+              {hasAnyAction ? 'Pass Action → Roll Phase' : 'No Action → Roll Phase'}
             </button>
           )}
 
@@ -155,7 +162,7 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
       )}
 
       {/* Formations */}
-      <div className="flex flex-wrap gap-3 mt-1">
+      <div className="flex flex-wrap gap-3 mt-1 justify-center">
         {player.formations.map((formation) => {
           const card = getCard(formation.cardId);
           return (

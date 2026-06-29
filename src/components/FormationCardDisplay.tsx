@@ -78,8 +78,11 @@ export default function FormationCardDisplay({
     : isReactionTarget
     ? '2px solid #4a9c5e'
     : canTakeAction
-    ? '1px solid rgba(201,168,76,0.4)'
+    ? '2px solid rgba(201,168,76,0.8)'
     : '1px solid rgba(255,255,255,0.1)';
+  const cardGlow = canTakeAction && !canReceiveDie && !isReactionTarget
+    ? '0 0 10px rgba(201,168,76,0.35)'
+    : undefined;
 
   function handleCardClick() {
     if (canReceiveDie && selectedDieIndex !== null) {
@@ -108,6 +111,7 @@ export default function FormationCardDisplay({
       style={{
         background: wingBg,
         border: cardBorder,
+        boxShadow: cardGlow,
         opacity: cardOpacity,
         minWidth: '160px',
         maxWidth: '200px',
