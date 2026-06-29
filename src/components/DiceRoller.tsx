@@ -19,7 +19,8 @@ export default function DiceRoller({ state, playerIndex, dispatch, isActive }: P
   const totalDice = 6;
   const diceOnFormations = player.formations.reduce((sum, f) => sum + f.diceOnCard.length, 0);
   const poolSize = totalDice - diceOnFormations;
-  const hasRolled = player.dicePool.length > 0 || diceOnFormations > 0;
+  // hasRolled: the pool dice have been rolled this phase (or nothing left to roll)
+  const hasRolled = player.dicePool.length > 0 || poolSize === 0;
 
   return (
     <div className="flex items-center gap-2 flex-wrap mt-1">
