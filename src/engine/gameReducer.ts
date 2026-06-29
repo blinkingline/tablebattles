@@ -660,9 +660,10 @@ function handleEndRollPhase(state: GameState): GameState {
   const pi = state.currentPlayerIndex;
   const nextPi = (1 - pi) as 0 | 1;
 
-  // Clear diceAddedThisRoll for current player
+  // Discard unassigned pool dice and clear roll-phase tracking
   const clearRoll = (player: PlayerState): PlayerState => ({
     ...player,
+    dicePool: [],
     formations: player.formations.map(f => ({ ...f, diceAddedThisRoll: [] })),
     diceAssignedToWings: {},
   });
