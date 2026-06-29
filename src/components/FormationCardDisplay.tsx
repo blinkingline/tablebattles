@@ -67,6 +67,9 @@ function selectionErrorFor(
   formation: FormationState,
   card: FormationCard,
 ): string {
+  if (card.isSpecial && formation.cubesOnCard >= (card.specialMax ?? 1)) {
+    return `${card.name} is already at maximum cube capacity (${card.specialMax}).`;
+  }
   const da = card.diceArea;
   const existing = card.isSpecial ? formation.diceAddedThisRoll : formation.diceOnCard;
   const total = existing.length + selectedDice.length;

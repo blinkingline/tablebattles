@@ -614,7 +614,7 @@ function handleAssignDice(state: GameState, diePoolIndices: number[], formationI
   if (card.isSpecial) {
     const newFormations = player.formations.map((f, i) =>
       i === fIdx
-        ? { ...f, cubesOnCard: f.cubesOnCard + dies.length, diceAddedThisRoll: [...f.diceAddedThisRoll, ...dies] }
+        ? { ...f, cubesOnCard: f.cubesOnCard + 1, diceAddedThisRoll: [...f.diceAddedThisRoll, ...dies] }
         : f
     );
     const newPlayers = [...state.players] as [PlayerState, PlayerState];
@@ -1420,7 +1420,7 @@ export function canAssignDiceSet(
   }
 
   if (card.isSpecial) {
-    if (formation.cubesOnCard + dies.length > (card.specialMax ?? 1)) return false;
+    if (formation.cubesOnCard >= (card.specialMax ?? 1)) return false;
     return validateDiceSetForArea(dies, formation.diceAddedThisRoll, card.diceArea);
   }
 
