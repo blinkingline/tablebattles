@@ -1,0 +1,175 @@
+import type { Scenario } from '../types';
+
+export const SCENARIOS: Scenario[] = [
+  {
+    id: 's01',
+    scenarioNumber: 'S-01',
+    name: 'The Battle of White Mountain',
+    date: '8 November 1620',
+    description: "A strong defensive position is squandered by the hapless rebel leadership, effectively ending the Bohemian Revolt. A simple battle to get your feet wet.",
+    firstPlayer: {
+      factionName: 'The Bohemian Revolt',
+      cardIds: ['07A', '08A', '09A', '10A'],
+      morale: 4,
+    },
+    secondPlayer: {
+      factionName: 'Imperials & Catholic League',
+      cardIds: ['01A', '02A', '03A', '04A', '05A', '06A'],
+      morale: 2,
+    },
+  },
+  {
+    id: 's02',
+    scenarioNumber: 'S-02',
+    name: 'The Battle of Marston Moor',
+    date: '2 July 1644',
+    description: "Only the stubborn stand of the Whitecoats prevented total disaster. This has more moving parts than the White Mountain scenario.",
+    firstPlayer: {
+      factionName: 'Royalists',
+      cardIds: ['11A', '12A', '13A', '14A', '15A', '16A', '17A'],
+      morale: 2,
+    },
+    secondPlayer: {
+      factionName: 'Parliament & Covenanters',
+      cardIds: ['18A', '19A', '20A', '21A', '22A', '23A', '24A'],
+      morale: 3,
+    },
+  },
+  {
+    id: 's03',
+    scenarioNumber: 'S-03',
+    name: 'The Battle of the Plains of Abraham',
+    date: '13 September 1759',
+    description: "The battle that won Canada for the British. To win, the British must Rout all 3 French cards without losing any of their own. If the French Rout a single card, they win. This battle introduces Counterattack Reactions.",
+    firstPlayer: {
+      factionName: 'British',
+      cardIds: ['25A', '26A', '27A', '28A'],
+      morale: 0,
+    },
+    secondPlayer: {
+      factionName: 'French',
+      cardIds: ['29A', '30A', '31A', '32A'],
+      morale: 0,
+    },
+    specialVictoryCondition: 'plains-of-abraham',
+  },
+  {
+    id: 's04',
+    scenarioNumber: 'S-04',
+    name: 'The Battle of Bosworth Field',
+    date: '22 August 1485',
+    description: "The battle that ended the Wars of the Roses, and saw the ascendancy of the Tudors. Introduces the Absorb reaction and Command actions.",
+    firstPlayer: {
+      factionName: 'House of York',
+      cardIds: ['33A', '34A', '35A'],
+      morale: 2,
+    },
+    secondPlayer: {
+      factionName: 'House of Lancaster (Tudor)',
+      cardIds: ['36A', '37A', '38A'],
+      morale: 1,
+    },
+  },
+  {
+    id: 's05',
+    scenarioNumber: 'S-05',
+    name: 'The Battle of Malplaquet',
+    date: '11 September 1709',
+    description: "The Grand Alliance broke the French line — but paid for it with heavy losses. Villars wrote: 'If it pleases God to give your majesty's enemies another such victory, they are ruined.'",
+    firstPlayer: {
+      factionName: 'French',
+      cardIds: ['39A', '40A', '41A', '42A'],
+      morale: 2,
+    },
+    secondPlayer: {
+      factionName: 'The Grand Alliance',
+      cardIds: ['01B', '02B', '03B', '04B', '05B', '06B'],
+      morale: 3,
+    },
+  },
+  {
+    id: 's06',
+    scenarioNumber: 'S-06',
+    name: 'The Battle of Ivry',
+    date: '14 March 1590',
+    description: "Henri IV defeated his Catholic opposition thanks in part to enemy mercenaries sympathetic to his cause. A tricky scenario — a dance of screens.",
+    firstPlayer: {
+      factionName: 'Royalists',
+      cardIds: ['07B', '08B', '09B', '10B', '11B', '12B', '13B'],
+      morale: 4,
+    },
+    secondPlayer: {
+      factionName: 'The Catholic (Holy) League',
+      cardIds: ['14B', '15B', '16B', '17B', '18B', '19B', '20B'],
+      morale: 4,
+    },
+  },
+  {
+    id: 's07',
+    scenarioNumber: 'S-07',
+    name: 'The Battle of the Dunes',
+    date: '14 June 1658',
+    description: "Complicated politics saw French and English troops on both sides of this battlefield. You will need to master all three Reaction types to triumph here.",
+    firstPlayer: {
+      factionName: 'French & English',
+      cardIds: ['21B', '22B', '23B', '24B', '25B', '26B', '27B', '28B'],
+      morale: 2,
+    },
+    secondPlayer: {
+      factionName: 'Spanish, French & English',
+      cardIds: ['29B', '30B', '31B', '32B', '33B', '34B', '35B'],
+      morale: 3,
+    },
+  },
+  {
+    id: 's08',
+    scenarioNumber: 'S-08',
+    name: 'The Battle of Brooklyn Heights',
+    date: '27 August 1776',
+    description: "Outgunned, outmanned, outnumbered and outplanned, they've gotta make an all-out stand — at least until the main body of the army can escape. For experienced players.",
+    firstPlayer: {
+      factionName: 'Colonials',
+      cardIds: ['39B', '40B', '41B', '42B'],
+      morale: 1,
+    },
+    secondPlayer: {
+      factionName: 'British & Their Vile Hessians',
+      cardIds: ['36B', '37B', '38B'],
+      morale: 1,
+    },
+  },
+  {
+    id: 's36',
+    scenarioNumber: 'S-36',
+    name: 'The Battle of Pharsalus',
+    date: '9 August 48 BCE',
+    description: "The decisive battle of Caesar's Civil War. Knowing he would lose a straightforward clash of arms, Caesar gambled everything on a bold stratagem.",
+    firstPlayer: {
+      factionName: 'Gnaeus Pompeius Magnus',
+      cardIds: ['217A', '218A', '219A', '220A'],
+      morale: 2,
+    },
+    secondPlayer: {
+      factionName: 'Gaius Iulius Caesar',
+      cardIds: ['221A', '222A', '223A', '224A', '225A'],
+      morale: 2,
+    },
+  },
+  {
+    id: 's37',
+    scenarioNumber: 'S-37',
+    name: 'The Battle of Inkerman',
+    date: '5 November 1854',
+    description: "In a dense fog, a massive but badly coordinated Russian army launched a surprise attack. As the fog lifted and fresh Allied troops poured in, their desperate, doomed defense improbably turned into a lopsided victory.",
+    firstPlayer: {
+      factionName: 'Russian Empire',
+      cardIds: ['218B', '219B', '220B', '217B'],
+      morale: 1,
+    },
+    secondPlayer: {
+      factionName: 'Anglo-French Alliance',
+      cardIds: ['221B', '222B', '223B', '224B', '225B'],
+      morale: 2,
+    },
+  },
+];
