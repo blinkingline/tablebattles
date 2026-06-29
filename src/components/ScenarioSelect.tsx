@@ -12,7 +12,7 @@ export default function ScenarioSelect({ onSelect }: Props) {
           Table Battles
         </h1>
         <p className="text-center text-sm mb-8" style={{ color: '#9a8c7e' }}>
-          2nd Edition · by Tom Russell
+          2nd Edition · by Amabel Holland
         </p>
 
         <h2 className="text-xl font-semibold mb-4 text-center" style={{ color: '#e8e0d0' }}>
