@@ -115,8 +115,16 @@ export default function FormationCardDisplay({
 
   function handleCardClick() {
     if (canReceiveDie && selectedDieIndex !== null) {
+      const pool = state.players[playerIndex].dicePool;
+      const dieValue = pool[selectedDieIndex];
       dispatch({ type: 'ASSIGN_DIE', diePoolIndex: selectedDieIndex, formationId: card.id });
-      onDieSelected(null);
+      // Auto-select next same-value die so user can keep placing without re-clicking pool
+      const nextIdx = pool.findIndex((v, i) => v === dieValue && i !== selectedDieIndex);
+      if (nextIdx !== -1) {
+        onDieSelected(nextIdx > selectedDieIndex ? nextIdx - 1 : nextIdx);
+      } else {
+        onDieSelected(null);
+      }
     }
   }
 
