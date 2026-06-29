@@ -1,4 +1,4 @@
-import type { FormationCard, FormationState, GameState, FormationAction } from '../types';
+import type { FormationCard, FormationState, GameState, FormationAction, DiceArea } from '../types';
 import type { GameAction } from '../engine/gameReducer';
 import { canAssignDie } from '../engine/gameReducer';
 
@@ -19,9 +19,31 @@ function diceFreq(dice: number[]): Record<number, number> {
   return counts;
 }
 
+function meetsDiceAreaMin(diceArea: DiceArea, diceOnCard: number[]): boolean {
+  switch (diceArea.type) {
+    case 'values':
+    case 'any':
+      return diceOnCard.length >= 1;
+    case 'doubles':
+      return diceOnCard.length >= 2 && Object.values(diceFreq(diceOnCard)).some(c => c >= 2);
+    case 'triples':
+      return diceOnCard.length >= 3 && Object.values(diceFreq(diceOnCard)).some(c => c >= 3);
+    case 'straight': {
+      const count = diceArea.count!;
+      if (diceOnCard.length < count) return false;
+      const sorted = [...diceOnCard].sort((a, b) => a - b);
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] !== sorted[i - 1] + 1) return false;
+      }
+      return true;
+    }
+  }
+}
+
 function checkRequirement(action: FormationAction, formation: FormationState, card: FormationCard): boolean {
   if (card.isSpecial) return formation.cubesOnCard >= 1;
   if (formation.diceOnCard.length === 0) return false;
+  if (!meetsDiceAreaMin(card.diceArea, formation.diceOnCard)) return false;
   const dice = formation.diceOnCard;
   const req = action.requirement;
   if (!req) return true;

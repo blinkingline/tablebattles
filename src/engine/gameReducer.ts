@@ -49,29 +49,35 @@ function canPlaceDie(
   diceArea: DiceArea,
 ): boolean {
   if (!isPlayable(formation)) return false;
-  const added = formation.diceAddedThisRoll;
+
+  // Use the most complete picture of what's already on the formation:
+  // Normal formations: diceOnCard has all dice (this roll + any carry-over from a passed turn).
+  // Special formations: diceOnCard is always empty; diceAddedThisRoll tracks this roll's placements.
+  const existing = formation.diceOnCard.length > 0
+    ? formation.diceOnCard
+    : formation.diceAddedThisRoll;
 
   switch (diceArea.type) {
     case 'values': {
       if (!diceArea.values!.includes(die)) return false;
-      if (diceArea.bracketed && added.length >= 1) return false;
+      if (diceArea.bracketed && existing.length >= 1) return false;
       return true;
     }
     case 'doubles': {
-      if (added.length >= 2) return false;
-      if (added.length === 1 && added[0] !== die) return false;
+      if (existing.length >= 2) return false;
+      if (existing.length === 1 && existing[0] !== die) return false;
       return true;
     }
     case 'triples': {
-      if (added.length >= 3) return false;
-      if (added.length > 0 && added[0] !== die) return false;
+      if (existing.length >= 3) return false;
+      if (existing.length > 0 && existing[0] !== die) return false;
       return true;
     }
     case 'straight': {
       const count = diceArea.count!;
-      if (added.length >= count) return false;
-      if (added.length === 0) return true;
-      const sorted = [...added].sort((a, b) => a - b);
+      if (existing.length >= count) return false;
+      if (existing.length === 0) return true;
+      const sorted = [...existing].sort((a, b) => a - b);
       const lo = sorted[0], hi = sorted[sorted.length - 1];
       if (die !== lo - 1 && die !== hi + 1) return false;
       const newLo = Math.min(die, lo), newHi = Math.max(die, hi);
@@ -128,6 +134,36 @@ function findAttackTarget(
   return undefined;
 }
 
+/**
+ * Check if dice on a normal formation satisfy the dice area's minimum pattern.
+ * Doubles needs 2 matching, Triples needs 3 matching, Straight-N needs N consecutive.
+ * Values and Any just need at least 1 die (placement rules already ensure correct values).
+ */
+function meetsDiceAreaMinimum(diceArea: DiceArea, diceOnCard: number[]): boolean {
+  switch (diceArea.type) {
+    case 'values':
+    case 'any':
+      return diceOnCard.length >= 1;
+    case 'doubles': {
+      if (diceOnCard.length < 2) return false;
+      return Object.values(diceFreq(diceOnCard)).some(c => c >= 2);
+    }
+    case 'triples': {
+      if (diceOnCard.length < 3) return false;
+      return Object.values(diceFreq(diceOnCard)).some(c => c >= 3);
+    }
+    case 'straight': {
+      const count = diceArea.count!;
+      if (diceOnCard.length < count) return false;
+      const sorted = [...diceOnCard].sort((a, b) => a - b);
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] !== sorted[i - 1] + 1) return false;
+      }
+      return true;
+    }
+  }
+}
+
 /** Check if a formation has enough dice/cubes to take an action. */
 function meetsRequirement(action: FormationAction, formation: FormationState): boolean {
   const card = getCard(formation.cardId);
@@ -135,6 +171,8 @@ function meetsRequirement(action: FormationAction, formation: FormationState): b
     return formation.cubesOnCard >= 1;
   }
   if (formation.diceOnCard.length === 0) return false;
+  // Dice area minimum: Doubles needs 2 matching, Triples needs 3, Straight-N needs N consecutive
+  if (!meetsDiceAreaMinimum(card.diceArea, formation.diceOnCard)) return false;
   const dice = formation.diceOnCard;
   const req = action.requirement;
   if (!req) return true;
