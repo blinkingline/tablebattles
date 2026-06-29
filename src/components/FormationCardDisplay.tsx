@@ -338,9 +338,14 @@ export default function FormationCardDisplay({
               <button
                 key={i}
                 onClick={(e) => {
-                  e.stopPropagation();
-                  if (canClickAction) dispatch({ type: 'TAKE_ACTION', formationId: card.id, actionIndex: i });
-                  else if (canClickReaction) dispatch({ type: 'TAKE_REACTION', formationId: card.id, actionIndex: i });
+                  if (canClickAction) {
+                    e.stopPropagation();
+                    dispatch({ type: 'TAKE_ACTION', formationId: card.id, actionIndex: i });
+                  } else if (canClickReaction) {
+                    e.stopPropagation();
+                    dispatch({ type: 'TAKE_REACTION', formationId: card.id, actionIndex: i });
+                  }
+                  // Otherwise let the click bubble up to the card for die assignment
                 }}
                 className="text-left rounded transition-all"
                 style={{
