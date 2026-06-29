@@ -471,7 +471,7 @@ export const CARDS: FormationCard[] = [
   {
     id: '35A',
     name: 'Northumberland',
-    wing: 'Blue',
+    wing: 'DkBlue',
     strength: 6,
     isSpecial: false,
     isStarred: false,
