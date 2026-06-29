@@ -741,18 +741,17 @@ function clearFormationDice(
   fIdx: number,
   isSpecial: boolean,
 ): PlayerState {
-  const f = player.formations[fIdx];
   if (isSpecial) {
     const newFormations = player.formations.map((fm, i) =>
       i === fIdx ? { ...fm, cubesOnCard: fm.cubesOnCard - 1 } : fm
     );
     return { ...player, formations: newFormations };
   }
-  const returnedDice = [...f.diceOnCard];
+  // Expended dice are discarded, not returned to the pool
   const newFormations = player.formations.map((fm, i) =>
     i === fIdx ? { ...fm, diceOnCard: [], diceAddedThisRoll: [] } : fm
   );
-  return { ...player, formations: newFormations, dicePool: [...player.dicePool, ...returnedDice] };
+  return { ...player, formations: newFormations };
 }
 
 function handleAttack(
