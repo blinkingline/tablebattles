@@ -721,7 +721,20 @@ function handleTakeAction(state: GameState, formationId: string, actionIndex: nu
   if (actionIndex >= card.actions.length) return state;
   const action = card.actions[actionIndex];
 
-  if (!meetsRequirement(action, formation)) return state;
+  if (!meetsRequirement(action, formation)) {
+    // Null action: player takes the action without meeting the requirement.
+    // Dice are cleared without applying any effect, then player proceeds to roll phase.
+    const hasDice = card.isSpecial ? formation.cubesOnCard > 0 : formation.diceOnCard.length > 0;
+    if (!hasDice) return state;
+    const nullPlayers = [...state.players] as [PlayerState, PlayerState];
+    nullPlayers[pi] = clearFormationDice(nullPlayers[pi], fIdx, card.isSpecial);
+    return {
+      ...state,
+      players: nullPlayers,
+      phase: 'roll-phase',
+      log: [...state.log, `${player.factionName} takes a null action on ${card.name} (requirement not met) — dice cleared.`],
+    };
+  }
   if (card.isSpecial && formation.cubesOnCard === 0) return state;
   if (!card.isSpecial && formation.diceOnCard.length === 0) return state;
 

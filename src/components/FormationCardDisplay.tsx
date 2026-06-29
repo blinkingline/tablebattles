@@ -371,8 +371,9 @@ export default function FormationCardDisplay({
             const reactionOpt = reactionOptions.find(r => r.actionIndex === i);
 
             const canClickAction = isMyTurn && isActiveType && hasDiceOrCubes && reqMet;
+            const canNullAction = isMyTurn && isActiveType && hasDiceOrCubes && !reqMet;
             const canClickReaction = isReactionTarget && !!reactionOpt;
-            const isClickable = canClickAction || canClickReaction;
+            const isClickable = canClickAction || canNullAction || canClickReaction;
 
             let bg: string, border: string, typeColor: string, detailColor: string, descColor: string;
             if (canClickAction) {
@@ -387,18 +388,19 @@ export default function FormationCardDisplay({
               typeColor = '#4ab870';
               detailColor = '#3a9458';
               descColor = '#3a8850';
+            } else if (canNullAction) {
+              // Null action: has dice but requirement not met — clickable to discard dice
+              bg = 'rgba(140,90,40,0.18)';
+              border = '1px solid rgba(160,110,50,0.45)';
+              typeColor = '#b08040';
+              detailColor = '#806030';
+              descColor = '#806030';
             } else if (!isActiveType) {
               bg = 'rgba(40,65,90,0.25)';
               border = '1px solid rgba(60,90,120,0.3)';
               typeColor = '#5a80a0';
               detailColor = '#4a6070';
               descColor = '#4a6070';
-            } else if (isMyTurn && isActiveType && hasDiceOrCubes && !reqMet) {
-              bg = 'rgba(120,60,40,0.15)';
-              border = '1px solid rgba(150,80,60,0.3)';
-              typeColor = '#8b5540';
-              detailColor = '#704535';
-              descColor = '#704535';
             } else {
               bg = 'rgba(40,40,40,0.3)';
               border = '1px solid rgba(80,80,80,0.2)';
@@ -415,7 +417,7 @@ export default function FormationCardDisplay({
               <button
                 key={i}
                 onClick={(e) => {
-                  if (canClickAction) {
+                  if (canClickAction || canNullAction) {
                     e.stopPropagation();
                     dispatch({ type: 'TAKE_ACTION', formationId: card.id, actionIndex: i });
                   } else if (canClickReaction) {
@@ -434,6 +436,7 @@ export default function FormationCardDisplay({
                 onMouseEnter={(e) => {
                   if (canClickAction) (e.currentTarget as HTMLElement).style.background = 'rgba(201,168,76,0.28)';
                   else if (canClickReaction) (e.currentTarget as HTMLElement).style.background = 'rgba(74,156,94,0.32)';
+                  else if (canNullAction) (e.currentTarget as HTMLElement).style.background = 'rgba(140,90,40,0.32)';
                 }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bg; }}
                 disabled={!isClickable}
@@ -457,8 +460,10 @@ export default function FormationCardDisplay({
                       {optLabel}
                     </span>
                   )}
-                  {isMyTurn && isActiveType && hasDiceOrCubes && !reqMet && action.requirement && (
-                    <span style={{ color: '#c05030', fontSize: '0.6rem' }}>✗ need {action.requirement}</span>
+                  {canNullAction && (
+                    <span style={{ color: '#b08040', fontSize: '0.6rem', fontStyle: 'italic' }}>
+                      (null — clears dice)
+                    </span>
                   )}
                 </div>
                 {targetLine && (
