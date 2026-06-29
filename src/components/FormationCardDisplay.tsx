@@ -21,6 +21,22 @@ function diceFreq(dice: number[]): Record<number, number> {
   return counts;
 }
 
+/** Returns false if the action targets specific formations and ALL of them are dead/gone. */
+function hasValidTarget(action: FormationAction, state: GameState, playerIndex: 0 | 1): boolean {
+  if (action.actionType !== 'Attack') return true;
+  if (!action.targets || action.targets.length === 0) return true;
+  const oppIdx = (1 - playerIndex) as 0 | 1;
+  const opponent = state.players[oppIdx];
+  return action.targets.some(targetName =>
+    opponent.formations.some(f => {
+      if (getCard(f.cardId).name !== targetName) return false;
+      if (f.isRouted || f.isRetired || f.hasPursued) return false;
+      if (action.conditionNotInReserve && f.inReserve) return false;
+      return true;
+    })
+  );
+}
+
 function meetsDiceAreaMin(diceArea: DiceArea, diceOnCard: number[]): boolean {
   switch (diceArea.type) {
     case 'values':
@@ -398,9 +414,10 @@ export default function FormationCardDisplay({
             const isReactiveType = action.actionType === 'Screen'
               || action.actionType === 'Counterattack'
               || action.actionType === 'Absorb';
-            const canClickAction = isMyTurn && isActiveType && hasDiceOrCubes && reqMet;
+            const targetAvailable = hasValidTarget(action, state, playerIndex);
+            const canClickAction = isMyTurn && isActiveType && hasDiceOrCubes && reqMet && targetAvailable;
             const canNullAction = isMyTurn && hasDiceOrCubes && (
-              (isActiveType && !reqMet) || isReactiveType
+              (isActiveType && (!reqMet || !targetAvailable)) || isReactiveType
             );
             const canClickReaction = isReactionTarget && !!reactionOpt;
             const isClickable = canClickAction || canNullAction || canClickReaction;
@@ -471,9 +488,11 @@ export default function FormationCardDisplay({
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bg; }}
                 disabled={!isClickable}
                 title={
-                  isMyTurn && isActiveType && hasDiceOrCubes && !reqMet
-                    ? `Need ${action.requirement}`
-                    : action.description
+                  isMyTurn && isActiveType && hasDiceOrCubes && !targetAvailable
+                    ? 'No valid targets remaining'
+                    : isMyTurn && isActiveType && hasDiceOrCubes && !reqMet
+                      ? `Need ${action.requirement}`
+                      : action.description
                 }
               >
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', flexWrap: 'wrap' }}>

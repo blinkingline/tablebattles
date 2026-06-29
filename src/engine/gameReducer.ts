@@ -827,7 +827,18 @@ function handleAttack(
   const targets = action.targets ?? [];
   const skipInReserve = action.conditionNotInReserve ?? false;
   const targetFormation = findAttackTarget(targets, opponent.formations, skipInReserve);
-  if (!targetFormation) return state; // no valid target
+  if (!targetFormation) {
+    // All targets removed — null action: clear dice and proceed
+    const fIdx = state.players[pi].formations.findIndex(f => f.cardId === formation.cardId);
+    const nullPlayers = [...state.players] as [PlayerState, PlayerState];
+    nullPlayers[pi] = clearFormationDice(nullPlayers[pi], fIdx, card.isSpecial);
+    return {
+      ...state,
+      players: nullPlayers,
+      phase: 'roll-phase',
+      log: [...state.log, `${card.name} has no valid targets — dice cleared.`],
+    };
+  }
 
   const targetCard = getCard(targetFormation.cardId);
 
