@@ -116,6 +116,17 @@ const WING_BG: Record<string, string> = {
   DkBlue: 'rgba(26,74,122,0.18)',
 };
 
+function diceSlotCount(card: FormationCard): number {
+  const da = card.diceArea;
+  switch (da.type) {
+    case 'doubles': return 2;
+    case 'triples': return 3;
+    case 'straight': return da.count!;
+    case 'values':
+    case 'any': return 1;
+  }
+}
+
 function diceAreaLabel(card: FormationCard): string {
   const da = card.diceArea;
   switch (da.type) {
@@ -328,26 +339,45 @@ export default function FormationCardDisplay({
           <span style={{ color: '#c9a84c', fontSize: '0.7rem', fontWeight: 600 }}>{diceAreaLabel(card)}</span>
         </div>
 
-        {/* ── Dice on card ── */}
-        {formation.diceOnCard.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-1">
-            {formation.diceOnCard.map((val, i) => (
-              <button
-                key={i}
-                onClick={(e) => { e.stopPropagation(); handleDieOnCardClick(i); }}
-                className="w-6 h-6 rounded font-bold flex items-center justify-center"
-                style={{
-                  background: 'rgba(201,168,76,0.25)',
-                  border: '1px solid rgba(201,168,76,0.6)',
-                  color: '#c9a84c',
-                  fontSize: '0.75rem',
-                  cursor: isActive && isRollPhase && isCurrentPlayer ? 'pointer' : 'default',
-                }}
-                title={isActive && isRollPhase && isCurrentPlayer ? `Return ${val} to pool` : `Die: ${val}`}
-              >
-                {val}
-              </button>
-            ))}
+        {/* ── Dice on card (always visible) ── */}
+        {!card.isSpecial && (
+          <div className="flex flex-wrap gap-1 mb-1 items-center" style={{ minHeight: '1.75rem' }}>
+            {formation.diceOnCard.length > 0
+              ? formation.diceOnCard.map((val, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => { e.stopPropagation(); handleDieOnCardClick(i); }}
+                    className="w-6 h-6 rounded font-bold flex items-center justify-center"
+                    style={{
+                      background: 'rgba(201,168,76,0.25)',
+                      border: '1px solid rgba(201,168,76,0.6)',
+                      color: '#c9a84c',
+                      fontSize: '0.75rem',
+                      cursor: isActive && isRollPhase && isCurrentPlayer ? 'pointer' : 'default',
+                    }}
+                    title={isActive && isRollPhase && isCurrentPlayer ? `Return ${val} to pool` : `Die: ${val}`}
+                  >
+                    {val}
+                  </button>
+                ))
+              : Array.from({ length: diceSlotCount(card) }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-6 h-6 rounded flex items-center justify-center"
+                    style={{
+                      background: canReceiveDice ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.04)',
+                      border: canReceiveDice
+                        ? '1px dashed rgba(201,168,76,0.5)'
+                        : '1px dashed rgba(255,255,255,0.12)',
+                    }}
+                  />
+                ))
+            }
+            {formation.diceOnCard.length === 0 && canReceiveDice && (
+              <span style={{ color: 'rgba(201,168,76,0.7)', fontSize: '0.58rem', marginLeft: '2px' }}>
+                ← assign
+              </span>
+            )}
           </div>
         )}
 
