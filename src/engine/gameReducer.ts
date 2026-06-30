@@ -431,7 +431,7 @@ function findAbsorbReactions(
   for (const f of defenderFormations) {
     if (!isPlayable(f)) continue;
     const card = getCard(f.cardId);
-    if (f.diceOnCard.length === 0) return reactions;
+    if (f.diceOnCard.length === 0) continue;
 
     card.actions.forEach((a, idx) => {
       if (a.actionType !== 'Absorb') return;

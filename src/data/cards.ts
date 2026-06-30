@@ -1398,6 +1398,7 @@ export const CARDS: FormationCard[] = [
     isSpecial: true,
     specialMax: 1,
     isStarred: false,
+    noDice: true,
     diceArea: { type: 'doubles' },
     actions: [
       { actionType: 'Command', requirement: 'Two Pairs', commandTarget: 'The Fog Lifts...', description: 'Remove the top Fog Cube; resolve its effect.' },
