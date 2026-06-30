@@ -683,9 +683,9 @@ function handleEndRollPhase(state: GameState): GameState {
     log: [...state.log, `${nextPlayer.factionName}'s turn begins.`],
   };
 
-  // Check "no attacks possible" at start of action phase (not applicable to special-win scenarios)
+  // Check "no attacks possible" at the start of every turn — including skipped action phases
   const scenario = SCENARIOS.find(s => s.id === state.scenarioId);
-  if (!skipped && !scenario?.specialVictoryCondition) {
+  if (!scenario?.specialVictoryCondition) {
     nextState = checkNoAttacksPossibleWin(nextState);
   }
 
