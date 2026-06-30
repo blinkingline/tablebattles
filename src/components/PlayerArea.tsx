@@ -159,8 +159,8 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
         </div>
       )}
 
-      {/* Skipped action notice */}
-      {isActive && isRollPhase && isCurrentPlayer && state.skippedActionPhase && (
+      {/* Skipped action notice — shown to the reactor during their roll phase */}
+      {isActive && isRollPhase && isCurrentPlayer && state.skippedPlayerIndex === playerIndex && (
         <div className="text-xs italic px-2 py-1 rounded" style={{ color: '#9a8c7e', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
           No action this turn — you reacted during your opponent's last turn.
         </div>

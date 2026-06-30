@@ -96,7 +96,7 @@ export interface PlayerState {
 export interface GameState {
   phase: GamePhase;
   currentPlayerIndex: 0 | 1;
-  skippedActionPhase: boolean;
+  skippedPlayerIndex: 0 | 1 | null; // which player will skip their next action phase (due to reacting)
   actionTakenThisTurn: boolean;
   pendingAction?: PendingAction;
   availableReactions: ReactionOption[];

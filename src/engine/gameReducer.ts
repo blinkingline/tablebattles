@@ -552,7 +552,7 @@ function initializeScenario(scenarioId: string): GameState {
   const state: GameState = {
     phase: 'action-phase',
     currentPlayerIndex: 0,
-    skippedActionPhase: false,
+    skippedPlayerIndex: null,
     actionTakenThisTurn: false,
     availableReactions: [],
     players: [
@@ -677,13 +677,16 @@ function handleEndRollPhase(state: GameState): GameState {
   newPlayers[pi] = clearRoll(newPlayers[pi]);
 
   const nextPlayer = newPlayers[nextPi];
-  const skipped = state.skippedActionPhase;
+  // Skip next player's action phase if they reacted last turn
+  const skipped = state.skippedPlayerIndex === nextPi;
 
   let nextState: GameState = {
     ...state,
     players: newPlayers,
     currentPlayerIndex: nextPi,
-    skippedActionPhase: false,
+    // Keep skippedPlayerIndex so the reactor sees the message during their roll phase,
+    // then clear it on their subsequent end-roll (at that point nextPi won't match)
+    skippedPlayerIndex: skipped ? nextPi : null,
     actionTakenThisTurn: false,
     phase: skipped ? 'roll-phase' : 'action-phase',
     log: [...state.log, `${nextPlayer.factionName}'s turn begins.`],
@@ -1221,7 +1224,7 @@ function handleTakeReaction(state: GameState, formationId: string, actionIndex: 
         ...newState,
         players: newPlayers,
         phase: 'roll-phase',
-        skippedActionPhase: true,
+        skippedPlayerIndex: oppIdx,
         pendingAction: undefined,
         availableReactions: [],
         log: [
@@ -1282,7 +1285,7 @@ function handleTakeReaction(state: GameState, formationId: string, actionIndex: 
         ...newState,
         players: newPlayers,
         phase: 'roll-phase',
-        skippedActionPhase: true,
+        skippedPlayerIndex: oppIdx,
         pendingAction: undefined,
         availableReactions: [],
         log: [
@@ -1338,7 +1341,7 @@ function handleTakeReaction(state: GameState, formationId: string, actionIndex: 
         ...newState,
         players: newPlayers,
         phase: 'roll-phase',
-        skippedActionPhase: true,
+        skippedPlayerIndex: oppIdx,
         pendingAction: undefined,
         availableReactions: [],
         log: [
@@ -1384,7 +1387,7 @@ function handleNoReaction(state: GameState): GameState {
   const oppIdx = (1 - pending.actingPlayerIndex) as 0 | 1;
 
   const newState = applyAttackEffects(
-    { ...state, skippedActionPhase: true },
+    { ...state, skippedPlayerIndex: oppIdx },
     pending,
     null,
   );
@@ -1400,7 +1403,7 @@ function handleNoReaction(state: GameState): GameState {
 export const defaultState: GameState = {
   phase: 'scenario-select',
   currentPlayerIndex: 0,
-  skippedActionPhase: false,
+  skippedPlayerIndex: null,
   actionTakenThisTurn: false,
   availableReactions: [],
   players: [
