@@ -95,10 +95,18 @@ export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: P
 
           {isReactionPhase && isPendingDefender && (
             <>
-              <div className="text-xs font-bold" style={{ color: '#e8a030' }}>
-                {state.players[pendingAction!.actingPlayerIndex].factionName} attacks!
-                React or decline:
-              </div>
+              {(() => {
+                const allVoluntary = state.availableReactions.every(r => {
+                  const c = getCard(r.formationId);
+                  return c.actions[r.actionIndex]?.voluntary === true;
+                });
+                return (
+                  <div className="text-xs font-bold" style={{ color: '#e8a030' }}>
+                    {state.players[pendingAction!.actingPlayerIndex].factionName} attacks!{' '}
+                    {allVoluntary ? 'React (optional):' : 'You must react:'}
+                  </div>
+                );
+              })()}
               {state.availableReactions.every(r => {
                 const c = getCard(r.formationId);
                 return c.actions[r.actionIndex]?.voluntary === true;
