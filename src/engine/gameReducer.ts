@@ -1066,14 +1066,15 @@ function handleCommand(
   if (targetFIdx !== -1) {
     const targetCard = getCard(newPlayers[pi].formations[targetFIdx].cardId);
     if (targetCard.specialRuleId === 'the-stanleys') {
-      // Find Northumberland on the OPPONENT's side (York)
-      const northumFIdx = newPlayers[pi].formations.findIndex(
+      // Northumberland is on the OPPONENT's side (York), not Lancaster's
+      const yorkIdx = (1 - pi) as 0 | 1;
+      const northumFIdx = newPlayers[yorkIdx].formations.findIndex(
         f => getCard(f.cardId).name === 'Northumberland'
       );
-      if (northumFIdx !== -1 && isActive(newPlayers[pi].formations[northumFIdx])) {
+      if (northumFIdx !== -1 && isActive(newPlayers[yorkIdx].formations[northumFIdx])) {
         logMsg += ` The Stanleys betray! Northumberland immediately Routs!`;
         const tempState = { ...state, players: newPlayers };
-        const afterRouting = processRouting(tempState, pi, newPlayers[pi].formations[northumFIdx].cardId, false);
+        const afterRouting = processRouting(tempState, yorkIdx, newPlayers[yorkIdx].formations[northumFIdx].cardId, false);
         return { ...afterRouting, phase: 'roll-phase', log: [...afterRouting.log.slice(0, -1), logMsg] };
       }
     }

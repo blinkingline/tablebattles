@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GameState } from '../types';
 import type { GameAction } from '../engine/gameReducer';
 import { getCard } from '../data/cards';
@@ -16,6 +16,11 @@ interface Props {
 export default function PlayerArea({ state, playerIndex, dispatch, isBottom }: Props) {
   const [selectedDieIndices, setSelectedDieIndices] = useState<number[]>([]);
   const [assignError, setAssignError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedDieIndices([]);
+    setAssignError(null);
+  }, [state.phase, state.currentPlayerIndex]);
   const player = state.players[playerIndex];
   const isCurrentPlayer = state.currentPlayerIndex === playerIndex;
   const isRollPhase = state.phase === 'roll-phase';
