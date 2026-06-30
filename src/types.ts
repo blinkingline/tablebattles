@@ -49,6 +49,7 @@ export interface FormationCard {
   flavorText?: string;
   specialRuleText?: string;
   specialRuleId?: string;     // identifies engine-enforced special rules
+  noDice?: boolean;           // card never accepts dice assignment (e.g. Rupert's Lifeguard)
 }
 
 export type GamePhase =

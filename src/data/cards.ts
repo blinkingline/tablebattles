@@ -226,6 +226,7 @@ export const CARDS: FormationCard[] = [
     specialMax: 1,
     isStarred: false,
     diceArea: { type: 'any' },
+    noDice: true,
     actions: [],
     specialRuleText: "While in play, Tillier's Left and Tillier's Right suffer one less hit when Attacked. When Northern Horse or Byron would Rout, add the Lifeguard's Unit to that Formation instead (it does NOT Rout, but has 1 Unit). Then remove this card from play.",
     specialRuleId: 'rupert-lifeguard',

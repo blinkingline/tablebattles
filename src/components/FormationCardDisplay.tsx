@@ -347,13 +347,16 @@ export default function FormationCardDisplay({
         )}
 
         {/* ── Dice area ── */}
-        <div className="mb-1 flex items-center gap-1">
-          <span style={{ color: '#9a8c7e', fontSize: '0.65rem' }}>Dice area:</span>
-          <span style={{ color: '#c9a84c', fontSize: '0.7rem', fontWeight: 600 }}>{diceAreaLabel(card)}</span>
-        </div>
+        {!card.noDice && (
+          <div className="mb-1 flex items-center gap-1">
+            <span style={{ color: '#9a8c7e', fontSize: '0.65rem' }}>Dice area:</span>
+            <span style={{ color: '#c9a84c', fontSize: '0.7rem', fontWeight: 600 }}>{diceAreaLabel(card)}</span>
+          </div>
+        )}
 
-        {/* ── Dice on card (always visible) ── */}
-        <div className="flex flex-wrap gap-1 mb-1 items-center" style={{ minHeight: '1.75rem' }}>
+        {/* ── Dice on card (hidden for noDice cards) ── */}
+        {!card.noDice && (
+          <div className="flex flex-wrap gap-1 mb-1 items-center" style={{ minHeight: '1.75rem' }}>
             {formation.diceOnCard.length > 0
               ? formation.diceOnCard.map((val, i) => (
                   <button
@@ -390,7 +393,8 @@ export default function FormationCardDisplay({
                 ← assign
               </span>
             )}
-        </div>
+          </div>
+        )}
 
         {/* ── Special rule text ── */}
         {card.specialRuleText && (
