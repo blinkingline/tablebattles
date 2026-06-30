@@ -65,12 +65,14 @@ function validateDiceSetForArea(
     case 'any':
       return true;
     case 'doubles': {
-      if (allDice.length !== 2) return false;
-      return allDice[0] === allDice[1];
+      // Each placement must be exactly 2 matching dice; can accumulate across placements
+      if (newDice.length !== 2) return false;
+      return newDice[0] === newDice[1];
     }
     case 'triples': {
-      if (allDice.length !== 3) return false;
-      return allDice.every(d => d === allDice[0]);
+      // Each placement must be exactly 3 matching dice; can accumulate across placements
+      if (newDice.length !== 3) return false;
+      return newDice.every(d => d === newDice[0]);
     }
     case 'straight': {
       const count = diceArea.count!;
