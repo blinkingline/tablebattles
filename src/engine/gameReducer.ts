@@ -1480,5 +1480,5 @@ export function canAssignDiceSet(
     return validateDiceSetForArea(dies, formation.diceAddedThisRoll, card.diceArea);
   }
 
-  return validateDiceSetForArea(dies, formation.diceOnCard, card.diceArea);
+  return validateDiceSetForArea(dies, formation.diceAddedThisRoll, card.diceArea);
 }

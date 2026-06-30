@@ -87,7 +87,7 @@ function selectionErrorFor(
     return `${card.name} is already at maximum cube capacity (${card.specialMax}).`;
   }
   const da = card.diceArea;
-  const existing = card.isSpecial ? formation.diceAddedThisRoll : formation.diceOnCard;
+  const existing = formation.diceAddedThisRoll;
   const total = existing.length + selectedDice.length;
 
   switch (da.type) {
