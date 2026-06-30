@@ -374,6 +374,7 @@ export const CARDS: FormationCard[] = [
     isSpecial: true,
     specialMax: 1,
     isStarred: false,
+    noDice: true,
     diceArea: { type: 'any' },
     actions: [
       { actionType: 'Screen', voluntary: true, targets: ['Any'], description: 'Cancel any enemy Attack. Then remove this card from play (not a Rout).' },
@@ -430,6 +431,7 @@ export const CARDS: FormationCard[] = [
     isSpecial: true,
     specialMax: 1,
     isStarred: false,
+    noDice: true,
     diceArea: { type: 'any' },
     actions: [
       { actionType: 'Screen', voluntary: true, targets: ['Any'], description: 'Cancel any enemy Attack. Then remove this card from play (not a Rout).' },
