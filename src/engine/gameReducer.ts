@@ -587,18 +587,21 @@ function initializeScenario(scenarioId: string): GameState {
 function handleRollDice(state: GameState): GameState {
   const pi = state.currentPlayerIndex;
   const player = state.players[pi];
-  // Roll fresh dice for pool
   const totalDice = 6;
-  const existing = player.formations.reduce((acc, f) => acc + f.diceOnCard.length, 0);
-  const poolSize = totalDice - existing;
+  // Only count dice on formations still in play (not routed/retired/pursued)
+  const existing = player.formations
+    .filter(f => !f.isRouted && !f.isRetired && !f.hasPursued)
+    .reduce((acc, f) => acc + f.diceOnCard.length, 0);
+  const poolSize = Math.max(0, totalDice - existing);
   const rolledPool = Array.from({ length: poolSize }, rollDie);
 
   const newPlayers = [...state.players] as [PlayerState, PlayerState];
   newPlayers[pi] = { ...player, dicePool: rolledPool };
+  const existingNote = existing > 0 ? ` (${existing} locked on formations)` : '';
   return {
     ...state,
     players: newPlayers,
-    log: [...state.log, `${player.factionName} rolls ${rolledPool.join(', ')}`],
+    log: [...state.log, `${player.factionName} rolls ${poolSize} dice: ${rolledPool.join(', ')}${existingNote}`],
   };
 }
 
