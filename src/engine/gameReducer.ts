@@ -450,7 +450,13 @@ function findAbsorbReactions(
 }
 
 function checkWin(state: GameState): GameState {
-  // Check morale
+  // Special victory conditions take full priority — morale is irrelevant for these scenarios
+  const scenario = SCENARIOS.find(s => s.id === state.scenarioId);
+  if (scenario?.specialVictoryCondition === 'plains-of-abraham') {
+    return checkPlainsOfAbrahamWin(state);
+  }
+
+  // Standard morale check
   for (let i = 0; i < 2; i++) {
     if (state.players[i].morale <= 0 && state.players[1 - i].morale > 0) {
       return {
@@ -462,49 +468,29 @@ function checkWin(state: GameState): GameState {
     }
   }
   if (state.players[0].morale <= 0 && state.players[1].morale <= 0) {
-    // Both at 0 — whoever caused it wins (handled by simultaneous rout rules)
-    // Treat as draw (shouldn't normally happen)
     return state;
   }
 
-  // Plains of Abraham special: British wins by routing all 3 French normal formations
-  const scenario = SCENARIOS.find(s => s.id === state.scenarioId);
-  if (scenario?.specialVictoryCondition === 'plains-of-abraham') {
-    return checkPlainsOfAbrahamWin(state);
-  }
-
-  // Check "no attacks possible" for the current player's OPPONENT at start of their turn
-  // This check is done at the start of each player's action phase (handled elsewhere)
   return state;
 }
 
 function checkPlainsOfAbrahamWin(state: GameState): GameState {
-  // British (player 0) wins by routing all 3 French normal formations (not Montcalm) without losing any
-  // French win if any of their normal formations routes, OR if British loses any formation
   const british = state.players[0];
   const french = state.players[1];
 
-  const britishLost = british.formations.some(f => !getCard(f.cardId).isSpecial && !isActive(f));
-  const frenchNormal = french.formations.filter(f => !getCard(f.cardId).isSpecial);
-  const allFrenchRouted = frenchNormal.every(f => !isActive(f));
-  const anyFrenchRouted = frenchNormal.some(f => !isActive(f));
-
-  if (britishLost || anyFrenchRouted) {
-    // Whoever achieved this wins
-    if (britishLost && !anyFrenchRouted) {
-      return { ...state, phase: 'game-over', winner: 1, winReason: 'A British formation was lost! French win.' };
-    }
-    if (anyFrenchRouted && !britishLost) {
-      return { ...state, phase: 'game-over', winner: 0, winReason: 'All French formations routed! British win.' };
-    }
-    if (anyFrenchRouted && britishLost) {
-      // Simultaneous — French win (they rout and that's their win condition)
-      return { ...state, phase: 'game-over', winner: 1, winReason: 'A British formation was lost! French win.' };
-    }
+  // French win if any British formation is routed (retirement/pursuit don't count)
+  const anyBritishRouted = british.formations.some(f => f.isRouted);
+  if (anyBritishRouted) {
+    return { ...state, phase: 'game-over', winner: 1, winReason: 'A British formation was routed! French win.' };
   }
-  if (allFrenchRouted) {
+
+  // British win if all 3 French normal formations are out of play
+  const frenchNormal = french.formations.filter(f => !getCard(f.cardId).isSpecial);
+  const allFrenchDefeated = frenchNormal.every(f => !isActive(f));
+  if (allFrenchDefeated) {
     return { ...state, phase: 'game-over', winner: 0, winReason: 'All French formations routed! British win.' };
   }
+
   return state;
 }
 
@@ -579,6 +565,7 @@ function initializeScenario(scenarioId: string): GameState {
     scenarioId,
   };
 
+  if (scenario.specialVictoryCondition) return state;
   return checkNoAttacksPossibleWin(state);
 }
 
@@ -696,8 +683,9 @@ function handleEndRollPhase(state: GameState): GameState {
     log: [...state.log, `${nextPlayer.factionName}'s turn begins.`],
   };
 
-  // Check "no attacks possible" at start of action phase
-  if (!skipped) {
+  // Check "no attacks possible" at start of action phase (not applicable to special-win scenarios)
+  const scenario = SCENARIOS.find(s => s.id === state.scenarioId);
+  if (!skipped && !scenario?.specialVictoryCondition) {
     nextState = checkNoAttacksPossibleWin(nextState);
   }
 
