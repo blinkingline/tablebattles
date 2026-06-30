@@ -310,18 +310,18 @@ function processRouting(
     // This is handled when The Stanleys come out of reserve
   }
 
-  // Check if Rupert's Lifeguard should intercept this routing
+  // Check if Rupert's Lifeguard should intercept this routing (mandatory if in play)
   const lifeguard = updatedRoutingPlayer.formations.find(f => {
     const c = getCard(f.cardId);
-    return c.specialRuleId === 'rupert-lifeguard' && f.cubesOnCard >= 1;
+    return c.specialRuleId === 'rupert-lifeguard' && isPlayable(f);
   });
   if (lifeguard && (routedCard.name === 'Northern Horse' || routedCard.name === 'Byron')) {
-    // Intercept: formation doesn't rout, lifeguard is removed
+    // Intercept: save the routing formation at 1 unit, remove Lifeguard (not a rout)
     const lIdx = updatedRoutingPlayer.formations.findIndex(f => f.cardId === lifeguard.cardId);
     const fIdx = updatedRoutingPlayer.formations.findIndex(f => f.cardId === formationId);
     const formations = updatedRoutingPlayer.formations.map((f, i) => {
       if (i === fIdx) return { ...f, isRouted: false, unitsRemaining: 1 };
-      if (i === lIdx) return { ...f, isRouted: true, cubesOnCard: 0 };
+      if (i === lIdx) return { ...f, isRetired: true, cubesOnCard: 0 };
       return f;
     });
     updatedRoutingPlayer = { ...updatedRoutingPlayer, formations };
@@ -543,12 +543,11 @@ function initializeScenario(scenarioId: string): GameState {
   const p0Formations = scenario.firstPlayer.cardIds.map(makeFreshFormation);
   const p1Formations = scenario.secondPlayer.cardIds.map(makeFreshFormation);
 
-  // The Fog: starts with 3 cubes
+  // Special formations with pre-placed cubes at game start
   for (const f of [...p0Formations, ...p1Formations]) {
     const card = getCard(f.cardId);
-    if (card.specialRuleId === 'the-fog') {
-      f.cubesOnCard = 3;
-    }
+    if (card.specialRuleId === 'the-fog') f.cubesOnCard = 3;
+    if (card.specialRuleId === 'rupert-lifeguard') f.cubesOnCard = 1;
   }
 
   const state: GameState = {
@@ -869,7 +868,7 @@ function handleAttack(
   ) {
     const lifeguard = opponent.formations.find(f => {
       const c = getCard(f.cardId);
-      return c.specialRuleId === 'rupert-lifeguard' && f.cubesOnCard >= 1 && isPlayable(f);
+      return c.specialRuleId === 'rupert-lifeguard' && isPlayable(f);
     });
     if (lifeguard) {
       hitsToApply = Math.max(0, hitsToApply - 1);
