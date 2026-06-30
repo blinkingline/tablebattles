@@ -20,22 +20,24 @@ export default function ScenarioSelect({ onSelect }: Props) {
         </h2>
 
         <div className="grid gap-3">
-          {SCENARIOS.map((s) => (
+          {SCENARIOS.map((s) => {
+            const verified = ['s01', 's02', 's03'].includes(s.id);
+            return (
             <button
               key={s.id}
               onClick={() => onSelect(s.id)}
               className="w-full text-left rounded-lg p-4 border transition-all hover:scale-[1.01]"
               style={{
                 background: 'rgba(255,255,255,0.04)',
-                borderColor: 'rgba(201,168,76,0.3)',
+                borderColor: verified ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.1)',
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = 'rgba(201,168,76,0.1)';
-                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(201,168,76,0.6)';
+                (e.currentTarget as HTMLElement).style.background = verified ? 'rgba(201,168,76,0.1)' : 'rgba(255,255,255,0.07)';
+                (e.currentTarget as HTMLElement).style.borderColor = verified ? 'rgba(201,168,76,0.6)' : 'rgba(255,255,255,0.2)';
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)';
-                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(201,168,76,0.3)';
+                (e.currentTarget as HTMLElement).style.borderColor = verified ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.1)';
               }}
             >
               <div className="flex items-start gap-3">
@@ -46,8 +48,14 @@ export default function ScenarioSelect({ onSelect }: Props) {
                   {s.scenarioNumber}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-base" style={{ color: '#e8e0d0' }}>
-                    {s.name}
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-base" style={{ color: '#e8e0d0' }}>
+                      {s.name}
+                    </span>
+                    {verified
+                      ? <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: 'rgba(80,160,80,0.2)', color: '#7cc47c', border: '1px solid rgba(80,160,80,0.35)' }}>Available</span>
+                      : <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: 'rgba(180,120,40,0.2)', color: '#c49050', border: '1px solid rgba(180,120,40,0.35)' }}>In Progress · may be buggy</span>
+                    }
                   </div>
                   <div className="text-xs mb-1" style={{ color: '#9a8c7e' }}>
                     {s.date} · {s.firstPlayer.factionName} vs {s.secondPlayer.factionName}
@@ -58,7 +66,8 @@ export default function ScenarioSelect({ onSelect }: Props) {
                 </div>
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         <p className="text-center text-xs mt-6" style={{ color: '#6b5d52' }}>
