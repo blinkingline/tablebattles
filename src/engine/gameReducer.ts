@@ -290,9 +290,8 @@ function processRouting(
   let moraleChange = simultaneous ? 0 : moraleLost;
 
   // Transfer morale cubes: routing side loses, opponent gains
-  const newRoutingMorale = newRoutingPlayer.morale;
   let opponentMorale = opponent.morale + (simultaneous ? 0 : moraleLost);
-  let routingMorale = newRoutingMorale;
+  let routingMorale = newRoutingPlayer.morale - (simultaneous ? 0 : moraleLost);
   if (moraleChange > 0) {
     log = [...log, `${routingPlayer.factionName} loses ${moraleChange} Morale. Opponent gains ${moraleChange} Morale.`];
   }
