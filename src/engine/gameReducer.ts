@@ -1380,7 +1380,7 @@ function handleNoReaction(state: GameState): GameState {
   const oppIdx = (1 - pending.actingPlayerIndex) as 0 | 1;
 
   const newState = applyAttackEffects(
-    { ...state, skippedPlayerIndex: oppIdx },
+    state,
     pending,
     null,
   );
