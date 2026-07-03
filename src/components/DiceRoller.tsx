@@ -1,5 +1,6 @@
 import type { GameState } from '../types';
 import type { GameAction } from '../engine/gameReducer';
+import { getCard } from '../data/cards';
 
 interface Props {
   state: GameState;
