@@ -842,7 +842,7 @@ export const CARDS: FormationCard[] = [
     isStarred: false,
     diceArea: { type: 'doubles' },
     actions: [
-      { actionType: 'Attack', requirement: 'Pair', targets: ['Egmont', 'Mercenaries', 'Mayenne'], hits: 1, description: '1 hit per action. 1 self per action.' },
+      { actionType: 'Attack', requirement: 'Pair', targets: ['Egmont', 'Mercenaries', 'Mayenne'], hits: 1, selfHit: true, description: '1 hit per action. 1 self per action.' },
       { actionType: 'Screen', requirement: 'Pair', targets: ['Egmont'], description: 'Cancel attack from Egmont.' },
     ],
   },
