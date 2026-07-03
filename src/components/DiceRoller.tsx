@@ -18,7 +18,8 @@ export default function DiceRoller({ state, playerIndex, dispatch, isActive }: P
 
   const totalDice = 6;
   const diceOnFormations = player.formations.reduce((sum, f) => sum + f.diceOnCard.length, 0);
-  const poolSize = totalDice - diceOnFormations;
+  const diceAddedThisRoll = player.formations.reduce((sum, f) => sum + f.diceAddedThisRoll.length, 0);
+  const poolSize = totalDice - diceOnFormations - diceAddedThisRoll;
   // hasRolled: the pool dice have been rolled this phase (or nothing left to roll)
   const hasRolled = player.dicePool.length > 0 || poolSize === 0;
 
