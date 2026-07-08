@@ -970,20 +970,21 @@ function applyAttackEffects(
 
   newState = { ...newState, players: newPlayers, phase: 'roll-phase', pendingAction: undefined, availableReactions: [] };
 
+  // Determine if target and acting formation rout simultaneously (no morale transfer if so)
+  const targetRouting = !!(pending.targetFormationId && reaction === null &&
+    newState.players[oppIdx].formations.find(f => f.cardId === pending.targetFormationId)?.unitsRemaining === 0);
+  const selfRouting = !!(pending.selfHitsToApply > 0 && reaction === null &&
+    newState.players[pi].formations.find(f => f.cardId === pending.formationId)?.unitsRemaining === 0);
+  const simultaneous = targetRouting && selfRouting;
+
   // Process routing for target
-  if (pending.targetFormationId && reaction === null) {
-    const targetF = newState.players[oppIdx].formations.find(f => f.cardId === pending.targetFormationId);
-    if (targetF && targetF.unitsRemaining === 0) {
-      newState = processRouting(newState, oppIdx, pending.targetFormationId);
-    }
+  if (targetRouting) {
+    newState = processRouting(newState, oppIdx, pending.targetFormationId!, simultaneous);
   }
 
   // Process routing for acting formation (self-hits)
-  if (pending.selfHitsToApply > 0 && reaction === null) {
-    const actingF = newState.players[pi].formations.find(f => f.cardId === pending.formationId);
-    if (actingF && actingF.unitsRemaining === 0) {
-      newState = processRouting(newState, pi, pending.formationId);
-    }
+  if (selfRouting) {
+    newState = processRouting(newState, pi, pending.formationId, simultaneous);
   }
 
   if (newState.phase !== 'game-over') {
