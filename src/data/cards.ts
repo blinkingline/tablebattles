@@ -1396,7 +1396,7 @@ export const CARDS: FormationCard[] = [
     wing: 'Pink',
     strength: 1,
     isSpecial: true,
-    specialMax: 1,
+    specialMax: 3,
     isStarred: false,
     noDice: true,
     diceArea: { type: 'doubles' },
