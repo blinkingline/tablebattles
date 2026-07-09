@@ -1045,6 +1045,11 @@ function handleCommand(
   let newPlayers = [...state.players] as [PlayerState, PlayerState];
   newPlayers[pi] = clearFormationDice(newPlayers[pi], fIdx, card.isSpecial);
 
+  // The Fog has its own command logic (cube removal already done by clearFormationDice above)
+  if (card.specialRuleId === 'the-fog') {
+    return handleFogCommand(state, pi, newPlayers, fIdx, `${card.name} issues Command.`);
+  }
+
   // Activate the commanded formation
   const targetFIdx = newPlayers[pi].formations.findIndex(
     f => getCard(f.cardId).name === commandTarget && f.inReserve
@@ -1110,25 +1115,13 @@ function handleFogCommand(
   const fogFIdx = newPlayers[pi].formations.findIndex(f => getCard(f.cardId).specialRuleId === 'the-fog');
   if (fogFIdx === -1) return { ...state, players: newPlayers, phase: 'roll-phase' };
 
+  // clearFormationDice already decremented the cube before this function was called
   const fog = newPlayers[pi].formations[fogFIdx];
-  const cubesRemaining = fog.cubesOnCard;
+  const cubesRemaining = fog.cubesOnCard; // post-decrement: 2 after 1st use, 1 after 2nd, 0 after 3rd
   let logMsg = baseMsg;
 
-  if (cubesRemaining <= 0) {
-    logMsg += ' The fog has already fully lifted.';
-    return { ...state, players: newPlayers, phase: 'roll-phase', log: [...state.log, logMsg] };
-  }
-
-  // Remove top cube and resolve effect
-  // Effects are resolved from cube 3 down to 1 (or in order as lifted)
-  const cubeIndex = 4 - cubesRemaining; // 1st lift = cube 1 effect, etc.
-
-  newPlayers[pi] = {
-    ...newPlayers[pi],
-    formations: newPlayers[pi].formations.map((f, i) =>
-      i === fogFIdx ? { ...f, cubesOnCard: f.cubesOnCard - 1 } : f
-    ),
-  };
+  // cubeIndex: which effect to resolve (1=Soimonoff, 2=British Troops, 3=French Troops)
+  const cubeIndex = 3 - cubesRemaining;
 
   switch (cubeIndex) {
     case 1:
