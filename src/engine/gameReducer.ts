@@ -168,6 +168,8 @@ function meetsRequirement(action: FormationAction, formation: FormationState): b
   if (card.isSpecial) {
     return formation.cubesOnCard >= 1;
   }
+  // The Fog needs at least one fog counter remaining in addition to the dice requirement
+  if (card.specialRuleId === 'the-fog' && formation.cubesOnCard <= 0) return false;
   if (formation.diceOnCard.length === 0) return false;
   // Dice area minimum: Doubles needs 2 matching, Triples needs 3, Straight-N needs N consecutive
   if (!meetsDiceAreaMinimum(card.diceArea, formation.diceOnCard)) return false;
@@ -1115,9 +1117,19 @@ function handleFogCommand(
   const fogFIdx = newPlayers[pi].formations.findIndex(f => getCard(f.cardId).specialRuleId === 'the-fog');
   if (fogFIdx === -1) return { ...state, players: newPlayers, phase: 'roll-phase' };
 
-  // clearFormationDice already decremented the cube before this function was called
+  // The Fog is not a special formation — clearFormationDice cleared its diceOnCard.
+  // Decrement the fog counter (cubesOnCard) here.
   const fog = newPlayers[pi].formations[fogFIdx];
-  const cubesRemaining = fog.cubesOnCard; // post-decrement: 2 after 1st use, 1 after 2nd, 0 after 3rd
+  if (fog.cubesOnCard <= 0) {
+    return { ...state, players: newPlayers, phase: 'roll-phase', log: [...state.log, baseMsg + ' The fog has already fully lifted.'] };
+  }
+  newPlayers[pi] = {
+    ...newPlayers[pi],
+    formations: newPlayers[pi].formations.map((f, i) =>
+      i === fogFIdx ? { ...f, cubesOnCard: f.cubesOnCard - 1 } : f
+    ),
+  };
+  const cubesRemaining = fog.cubesOnCard - 1; // after decrement
   let logMsg = baseMsg;
 
   // cubeIndex: which effect to resolve (1=Soimonoff, 2=British Troops, 3=French Troops)

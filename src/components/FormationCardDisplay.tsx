@@ -310,8 +310,25 @@ export default function FormationCardDisplay({
           </div>
         )}
 
-        {/* ── Strength ── */}
-        {card.isSpecial ? (
+        {/* ── Strength / Fog counters ── */}
+        {card.specialRuleId === 'the-fog' ? (
+          <div className="flex items-center gap-1 mb-1">
+            <span style={{ color: '#9a8c7e', fontSize: '0.65rem' }}>Fog:</span>
+            <div className="flex gap-0.5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-2.5 h-2.5 rounded-sm"
+                  style={
+                    i < formation.cubesOnCard
+                      ? { background: '#c9a84c' }
+                      : { background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        ) : card.isSpecial ? (
           <div className="flex items-center gap-1 mb-1">
             <span style={{ color: '#9a8c7e', fontSize: '0.65rem' }}>
               Sp.{card.specialMax === 1 ? 'I' : card.specialMax === 2 ? 'II' : 'III'}
