@@ -255,7 +255,9 @@ export default function FormationCardDisplay({
   }
 
   function handleDieOnCardClick(dieIndex: number) {
-    if (isActive && isRollPhase && isCurrentPlayer) {
+    if (!isActive || !isRollPhase || !isCurrentPlayer) return;
+    const firstThisRollIndex = formation.diceOnCard.length - formation.diceAddedThisRoll.length;
+    if (dieIndex >= firstThisRollIndex) {
       dispatch({ type: 'RETURN_DIE', formationId: card.id, dieIndex });
     }
   }
@@ -358,23 +360,27 @@ export default function FormationCardDisplay({
         {!card.noDice && (
           <div className="flex flex-wrap gap-1 mb-1 items-center" style={{ minHeight: '1.75rem' }}>
             {formation.diceOnCard.length > 0
-              ? formation.diceOnCard.map((val, i) => (
+              ? formation.diceOnCard.map((val, i) => {
+                  const firstThisRoll = formation.diceOnCard.length - formation.diceAddedThisRoll.length;
+                  const isReturnable = isActive && isRollPhase && isCurrentPlayer && i >= firstThisRoll;
+                  return (
                   <button
                     key={i}
                     onClick={(e) => { e.stopPropagation(); handleDieOnCardClick(i); }}
                     className="w-6 h-6 rounded font-bold flex items-center justify-center"
                     style={{
-                      background: 'rgba(201,168,76,0.25)',
-                      border: '1px solid rgba(201,168,76,0.6)',
-                      color: '#c9a84c',
+                      background: isReturnable ? 'rgba(201,168,76,0.25)' : 'rgba(255,255,255,0.1)',
+                      border: isReturnable ? '1px solid rgba(201,168,76,0.6)' : '1px solid rgba(255,255,255,0.25)',
+                      color: isReturnable ? '#c9a84c' : '#9a8c7e',
                       fontSize: '0.75rem',
-                      cursor: isActive && isRollPhase && isCurrentPlayer ? 'pointer' : 'default',
+                      cursor: isReturnable ? 'pointer' : 'default',
                     }}
-                    title={isActive && isRollPhase && isCurrentPlayer ? `Return ${val} to pool` : `Die: ${val}`}
+                    title={isReturnable ? `Return ${val} to pool` : `Die: ${val} (locked)`}
                   >
                     {val}
                   </button>
-                ))
+                  );
+                })
               : Array.from({ length: diceSlotCount(card) }).map((_, i) => (
                   <div
                     key={i}

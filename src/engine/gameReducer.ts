@@ -632,12 +632,18 @@ function handleReturnDie(state: GameState, formationId: string, dieIndex: number
   const die = formation.diceOnCard[dieIndex];
   if (die === undefined) return state;
 
+  // Only allow returning dice placed this roll phase (always appended at end of diceOnCard)
+  const firstThisRollIndex = formation.diceOnCard.length - formation.diceAddedThisRoll.length;
+  if (dieIndex < firstThisRollIndex) return state;
+
+  // Remove from diceAddedThisRoll using the offset index within this-roll dice
+  const thisRollOffset = dieIndex - firstThisRollIndex;
   const newFormations = player.formations.map((f, i) =>
     i === fIdx
       ? {
           ...f,
           diceOnCard: f.diceOnCard.filter((_, j) => j !== dieIndex),
-          diceAddedThisRoll: f.diceAddedThisRoll.filter((_, j) => j !== dieIndex),
+          diceAddedThisRoll: f.diceAddedThisRoll.filter((_, j) => j !== thisRollOffset),
         }
       : f
   );
