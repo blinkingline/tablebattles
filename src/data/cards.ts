@@ -1342,7 +1342,7 @@ export const CARDS: FormationCard[] = [
     isStarred: true,
     diceArea: { type: 'values', values: [5, 6] },
     actions: [
-      { actionType: 'Attack', targets: ["Pauloff's Right", 'Soimonoff'], hitsPerDie: true, description: '1 hit per die. Ignore first target until it comes out of Reserve.' },
+      { actionType: 'Attack', targets: ["Pauloff's Right", 'Soimonoff'], hitsPerDie: true, conditionNotInReserve: true, description: '1 hit per die. Ignore first target until it comes out of Reserve.' },
       { actionType: 'Counterattack', targets: ['Any'], hits: 1, selfReduceHits: 1, description: '1 hit. Additionally, this unit suffers one less hit.' },
     ],
   },
