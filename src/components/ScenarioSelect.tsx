@@ -21,7 +21,7 @@ export default function ScenarioSelect({ onSelect }: Props) {
 
         <div className="grid gap-3">
           {SCENARIOS.map((s) => {
-            const verified = ['s01', 's02', 's03', 's04', 's05', 's06', 's07', 's08', 's36'].includes(s.id);
+            const verified = ['s01', 's02', 's03', 's04', 's05', 's06', 's07', 's08', 's36', 's37'].includes(s.id);
             return (
             <button
               key={s.id}
